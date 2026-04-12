@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>JuxBox</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header -->
+    <header>
+      <div class="logo">JUX<span>BOX</span></div>
+      <div class="header-controls">
+        <button class="btn-upload-main" id="btn-upload-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="btn-label">Ajouter</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Upload Panel -->
+    <div id="upload-panel" class="panel hidden">
+      <div class="upload-panel-header">
+        <h3>Ajouter des fichiers</h3>
+        <button class="btn-close-panel" id="btn-close-upload">✕</button>
+      </div>
+      <div class="upload-tabs">
+        <button class="upload-tab active" data-tab="music">Musiques</button>
+        <button class="upload-tab" data-tab="fx">Effets (FX)</button>
+      </div>
+      <div class="upload-drop-zone" id="drop-zone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
+        <p>Appuie ou glisse tes MP3 ici</p>
+        <input type="file" id="file-input" accept=".mp3,audio/mpeg" multiple hidden>
+      </div>
+      <div id="upload-progress" class="hidden">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <span id="progress-label">Envoi...</span>
+      </div>
+    </div>
+
+    <!-- Main layout -->
+    <main>
+
+      <!-- Left: Playlist -->
+      <aside class="playlist-panel" id="panel-playlist">
+        <div class="panel-header">
+          <span>Playlist</span>
+          <span class="track-count" id="track-count">0 titres</span>
+        </div>
+        <ul id="playlist"></ul>
+      </aside>
+
+      <!-- Center: Deck -->
+      <section class="deck" id="panel-deck">
+
+        <!-- FX Strip Top -->
+        <div class="fx-strip fx-strip-top" id="fx-strip-top"></div>
+
+        <!-- Now playing -->
+        <div class="now-playing">
+          <div class="vinyl" id="vinyl">
+            <div class="vinyl-inner"></div>
+          </div>
+          <div class="track-info">
+            <div class="track-name" id="track-name">Aucune piste</div>
+            <div class="track-index" id="track-index">—</div>
+          </div>
+        </div>
+
+        <!-- Waveform / Progress -->
+        <div class="waveform-container">
+          <span class="time" id="time-current">0:00</span>
+          <div class="waveform" id="waveform">
+            <canvas id="waveform-canvas"></canvas>
+            <div class="progress-overlay" id="waveform-progress"></div>
+            <div class="seek-handle" id="seek-handle"></div>
+          </div>
+          <span class="time" id="time-total">0:00</span>
+        </div>
+
+        <!-- Transport controls -->
+        <div class="transport">
+          <button class="btn-transport" id="btn-prev" title="Titre précédent">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button class="btn-transport" id="btn-rewind" title="Retour au début">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm10 0L8 12l8 6V6z"/></svg>
+          </button>
+          <button class="btn-transport btn-play" id="btn-play" title="Play/Pause">
+            <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <button class="btn-transport" id="btn-forward" title="Avancer de 10s">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2z"/><text x="11" y="16" font-size="6" text-anchor="middle" fill="currentColor">10</text></svg>
+          </button>
+          <button class="btn-transport" id="btn-next" title="Titre suivant">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+        </div>
+
+        <!-- Volume & Pitch & Loop -->
+        <div class="mixer-row">
+          <div class="knob-group">
+            <label>Volume</label>
+            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" class="slider">
+            <span class="slider-val" id="volume-val">80%</span>
+          </div>
+          <div class="knob-group">
+            <label>Pitch</label>
+            <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" class="slider slider-pitch">
+            <span class="slider-val" id="pitch-val">1.00x</span>
+          </div>
+          <div class="loop-control">
+            <label>Loop</label>
+            <button class="btn-loop" id="btn-loop">OFF</button>
+          </div>
+        </div>
+
+        <!-- FX Strip Bottom -->
+        <div class="fx-strip fx-strip-bottom" id="fx-strip-bottom"></div>
+
+      </section>
+
+      <!-- Right: FX Pad -->
+      <aside class="fx-panel" id="panel-fx">
+        <div class="panel-header">
+          <span>FX</span>
+        </div>
+        <div class="fx-section-label">Sons FX <span id="fx-count">(0)</span></div>
+        <div id="fx-list" class="fx-sound-list"></div>
+      </aside>
+
+    </main>
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-nav" id="mobile-nav">
+      <button class="nav-tab active" data-panel="deck">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
+        <span>Deck</span>
+      </button>
+      <button class="nav-tab" data-panel="playlist">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        <span>Playlist</span>
+      </button>
+      <button class="nav-tab" data-panel="fx">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18h2V6H7v12zm4 4h2V2h-2v20zm-8-8h2v-4H3v4zm12 4h2V6h-2v12zm4-8v4h2v-4h-2z"/></svg>
+        <span>FX</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <audio id="audio-player" preload="auto"></audio>
+  <script src="app.js"></script>
+</body>
+</html>
