@@ -1,4 +1,3 @@
-// ── State ──
 const state = {
   playlist: [],
   currentIndex: -1,
@@ -6,606 +5,725 @@ const state = {
   isLooping: false,
   fxSounds: [],
   currentUploadTab: 'music',
+  playlistSearch: '',
+  waveformData: [],
+  fxAudio: null,
+  playingFxIndex: -1,
 };
 
 const audio = document.getElementById('audio-player');
-
-// ── DOM refs ──
-const elTrackName = document.getElementById('track-name');
-const elTrackIndex = document.getElementById('track-index');
-const elTrackCount = document.getElementById('track-count');
-const elPlaylist = document.getElementById('playlist');
-const elVinyl = document.getElementById('vinyl');
-const elTimeCurrent = document.getElementById('time-current');
-const elTimeTotal = document.getElementById('time-total');
-const elWaveformProgress = document.getElementById('waveform-progress');
-const elSeekHandle = document.getElementById('seek-handle');
-const elPlayIcon = document.getElementById('play-icon');
-const elPauseIcon = document.getElementById('pause-icon');
-const elFxList = document.getElementById('fx-list');
-const elFxCount = document.getElementById('fx-count');
 const canvas = document.getElementById('waveform-canvas');
-const canvasCtx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d');
 
-// ── Helpers ──
-function fmt(s) {
-  if (!isFinite(s)) return '0:00';
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
-}
+const els = {
+  playlistList: document.getElementById('playlist-list'),
+  trackCount: document.getElementById('track-count'),
+  trackName: document.getElementById('track-name'),
+  trackIndex: document.getElementById('track-index'),
+  trackDurationLabel: document.getElementById('track-duration-label'),
+  playStatePill: document.getElementById('play-state-pill'),
+  timeCurrent: document.getElementById('time-current'),
+  timeTotal: document.getElementById('time-total'),
+  waveform: document.getElementById('waveform'),
+  waveformProgress: document.getElementById('waveform-progress'),
+  seekHandle: document.getElementById('seek-handle'),
+  vinyl: document.getElementById('vinyl'),
+  playBtn: document.getElementById('btn-play'),
+  volume: document.getElementById('volume'),
+  volumeVal: document.getElementById('volume-val'),
+  loopState: document.getElementById('loop-state'),
+  loopPill: document.getElementById('loop-pill'),
+  fxCount: document.getElementById('fx-count'),
+  fxAdminList: document.getElementById('fx-admin-list'),
+  fxStripTop: document.getElementById('fx-strip-top'),
+  fxStripBottom: document.getElementById('fx-strip-bottom'),
+  fxTopCount: document.getElementById('fx-top-count'),
+  fxBottomCount: document.getElementById('fx-bottom-count'),
+  playlistSearch: document.getElementById('playlist-search'),
+  notif: document.getElementById('notif'),
+  uploadSheet: document.getElementById('upload-sheet'),
+  dropZone: document.getElementById('drop-zone'),
+  fileInput: document.getElementById('file-input'),
+  uploadLog: document.getElementById('upload-log'),
+  mobileSheet: document.getElementById('mobile-sheet'),
+  mobileSheetBody: document.getElementById('mobile-sheet-body'),
+  mobileSheetTitle: document.getElementById('mobile-sheet-title'),
+  mobileSheetKicker: document.getElementById('mobile-sheet-kicker'),
+};
 
-function notify(msg, type = 'success') {
-  let el = document.querySelector('.notif');
-  if (!el) { el = document.createElement('div'); el.className = 'notif'; document.body.appendChild(el); }
-  el.textContent = msg;
-  el.className = `notif ${type} show`;
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 2800);
+const durationCache = new Map();
+
+function fmt(sec) {
+  if (!Number.isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
 }
 
 function stripExt(name) {
-  return name.replace(/\.mp3$/i, '');
+  return String(name || '').replace(/\.mp3$/i, '');
 }
 
-// ── Waveform drawing ──
-let waveformData = [];
-
-function drawWaveform(data) {
-  waveformData = data;
-  redrawWaveform(0);
+function notify(message, type = 'success') {
+  els.notif.textContent = message;
+  els.notif.className = `notif ${type} show`;
+  clearTimeout(els.notif._timer);
+  els.notif._timer = setTimeout(() => els.notif.classList.remove('show'), 2600);
 }
 
-function redrawWaveform(progress) {
-  const W = canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-  const H = canvas.height = canvas.offsetHeight * window.devicePixelRatio;
-  canvasCtx.clearRect(0, 0, W, H);
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
-  const bars = Math.floor(W / 3);
-  const step = waveformData.length ? Math.floor(waveformData.length / bars) : 0;
-  const mid = H / 2;
+function fxDefaults(item) {
+  return { ...item, volume: item.volume ?? 1, position: item.position ?? 'bottom' };
+}
+
+function filteredPlaylist() {
+  const q = state.playlistSearch.trim().toLowerCase();
+  const list = state.playlist.map((track, absoluteIndex) => ({ track, absoluteIndex }));
+  return q ? list.filter(({ track }) => stripExt(track.name).toLowerCase().includes(q)) : list;
+}
+
+function updateHeaderState() {
+  const count = state.playlist.length;
+  els.trackCount.textContent = `${count} titre${count > 1 ? 's' : ''}`;
+  els.fxCount.textContent = `${state.fxSounds.length} FX`;
+  els.playBtn.textContent = state.isPlaying ? '❚❚' : '▶';
+  els.vinyl.classList.toggle('playing', state.isPlaying);
+  els.playStatePill.textContent = state.isPlaying ? 'Lecture en cours' : (state.currentIndex >= 0 ? 'En pause' : 'En attente');
+  els.loopState.textContent = state.isLooping ? 'ON' : 'OFF';
+  els.loopPill.classList.toggle('active', state.isLooping);
+}
+
+function lazyResolveDuration(url, el) {
+  if (!el) return;
+  if (durationCache.has(url)) {
+    el.textContent = durationCache.get(url);
+    return;
+  }
+  const a = new Audio();
+  a.src = url;
+  a.addEventListener('loadedmetadata', () => {
+    const value = fmt(a.duration);
+    durationCache.set(url, value);
+    el.textContent = value;
+    if (state.currentIndex >= 0 && state.playlist[state.currentIndex]?.url === url) {
+      els.trackDurationLabel.textContent = value;
+    }
+  }, { once: true });
+  a.addEventListener('error', () => { el.textContent = '—'; }, { once: true });
+}
+
+function renderPlaylist(target = els.playlistList, mobile = false) {
+  const data = filteredPlaylist();
+  target.innerHTML = '';
+
+  if (!data.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = state.playlist.length ? 'Aucun résultat pour cette recherche.' : 'Aucun titre disponible.';
+    target.appendChild(empty);
+    return;
+  }
+
+  data.forEach(({ track, absoluteIndex }, visibleIndex) => {
+    const row = document.createElement('div');
+    row.className = `track-row ${absoluteIndex === state.currentIndex ? 'active' : ''}`;
+    row.innerHTML = `
+      <div class="track-badge">${visibleIndex + 1}</div>
+      <div class="track-copy">
+        <div class="track-name-small">${escapeHtml(stripExt(track.name))}</div>
+        <div class="track-sub">${absoluteIndex === state.currentIndex ? 'Titre courant' : 'Cliquer pour charger'}</div>
+      </div>
+      <div class="track-duration">—</div>
+      <button class="icon-btn bad" type="button" title="Supprimer">✕</button>
+    `;
+
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.icon-btn')) return;
+      loadTrack(absoluteIndex, true);
+      if (mobile) closeMobileSheet();
+    });
+
+    row.querySelector('.icon-btn').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await removeTrack(absoluteIndex);
+      if (mobile) openMobilePlaylist();
+    });
+
+    target.appendChild(row);
+    lazyResolveDuration(track.url, row.querySelector('.track-duration'));
+  });
+}
+
+function renderNowPlaying() {
+  if (state.currentIndex < 0 || !state.playlist[state.currentIndex]) {
+    els.trackName.textContent = 'Aucune piste sélectionnée';
+    els.trackIndex.textContent = '—';
+    els.trackDurationLabel.textContent = 'Durée inconnue';
+    return;
+  }
+  const track = state.playlist[state.currentIndex];
+  els.trackName.textContent = stripExt(track.name);
+  els.trackIndex.textContent = `${state.currentIndex + 1} / ${state.playlist.length}`;
+  els.trackDurationLabel.textContent = durationCache.get(track.url) || 'Chargement…';
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawWaveform(progress = 0) {
+  const ratio = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth * ratio;
+  const h = canvas.clientHeight * ratio;
+  if (!w || !h) return;
+  canvas.width = w;
+  canvas.height = h;
+  ctx.clearRect(0, 0, w, h);
+
+  const bars = Math.max(32, Math.floor(w / 8));
+  const barW = w / bars;
+  const middle = h / 2;
   const cutoff = Math.floor(progress * bars);
+  const data = state.waveformData;
+  const step = data.length ? Math.max(1, Math.floor(data.length / bars)) : 0;
 
   for (let i = 0; i < bars; i++) {
-    let amp = 0.15;
-    if (step && waveformData.length) {
+    let amp = 0.16 + Math.abs(Math.sin(i * 0.22)) * 0.18;
+    if (step && data.length) {
       let sum = 0;
-      for (let j = 0; j < step; j++) sum += waveformData[i * step + j] || 0;
-      amp = Math.max(0.05, sum / step);
-    } else {
-      // placeholder random-ish bars
-      amp = 0.1 + 0.4 * Math.abs(Math.sin(i * 0.3));
+      for (let j = 0; j < step; j++) sum += data[i * step + j] || 0;
+      amp = Math.max(0.06, sum / step);
     }
-    const bH = amp * H * 0.9;
-    const x = i * (W / bars);
-    const bW = W / bars - 1.5;
-    canvasCtx.fillStyle = i < cutoff ? '#a855f7' : '#2a2a40';
-    canvasCtx.beginPath();
-    canvasCtx.roundRect(x, mid - bH / 2, bW, bH, 1.5);
-    canvasCtx.fill();
+    const barH = amp * h * 0.82;
+    const x = i * barW + 1;
+    const y = middle - barH / 2;
+    ctx.fillStyle = i < cutoff ? 'rgba(159,124,255,0.95)' : 'rgba(255,255,255,0.14)';
+    roundRect(ctx, x, y, Math.max(2, barW - 2), barH, 4);
   }
 }
 
 function generateWaveform(audioBuffer) {
   const raw = audioBuffer.getChannelData(0);
-  const samples = 512;
-  const step = Math.floor(raw.length / samples);
-  const data = [];
+  const samples = 700;
+  const block = Math.max(1, Math.floor(raw.length / samples));
+  const out = [];
   for (let i = 0; i < samples; i++) {
     let sum = 0;
-    for (let j = 0; j < step; j++) sum += Math.abs(raw[i * step + j]);
-    data.push(sum / step);
+    for (let j = 0; j < block; j++) sum += Math.abs(raw[i * block + j] || 0);
+    out.push(sum / block);
   }
-  const max = Math.max(...data);
-  return data.map(v => v / max);
+  const max = Math.max(...out, 0.0001);
+  return out.map(v => v / max);
 }
 
-function analyzeAudio(url) {
-  fetch(url)
-    .then(r => r.arrayBuffer())
-    .then(buf => {
-      const ac = new AudioContext();
-      return ac.decodeAudioData(buf);
-    })
-    .then(audioBuf => {
-      drawWaveform(generateWaveform(audioBuf));
-    })
-    .catch(() => redrawWaveform(0));
+async function analyzeAudio(url) {
+  try {
+    const buf = await fetch(url).then(r => r.arrayBuffer());
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const decoded = await ac.decodeAudioData(buf.slice(0));
+    state.waveformData = generateWaveform(decoded);
+    drawWaveform(audio.duration ? audio.currentTime / audio.duration : 0);
+    ac.close?.();
+  } catch {
+    state.waveformData = [];
+    drawWaveform(0);
+  }
 }
 
-// ── Playback ──
-function loadTrack(index, autoPlay = true) {
+async function loadTrack(index, autoPlay = true) {
   if (index < 0 || index >= state.playlist.length) return;
   state.currentIndex = index;
   const track = state.playlist[index];
-
   audio.src = track.url;
   audio.load();
-
-  elTrackName.textContent = stripExt(track.name);
-  elTrackIndex.textContent = `${index + 1} / ${state.playlist.length}`;
-  elTimeTotal.textContent = '0:00';
-  elTimeCurrent.textContent = '0:00';
-
-  waveformData = [];
-  redrawWaveform(0);
+  renderNowPlaying();
+  renderPlaylist();
+  if (isMobile()) syncOpenedMobileSheet();
+  state.waveformData = [];
+  drawWaveform(0);
+  els.timeCurrent.textContent = '0:00';
+  els.timeTotal.textContent = '0:00';
+  els.waveformProgress.style.width = '0%';
+  els.seekHandle.style.left = '0%';
   analyzeAudio(track.url);
 
-  renderPlaylist();
-
   if (autoPlay) {
-    audio.play().then(() => {
+    try {
+      await audio.play();
       state.isPlaying = true;
-      updatePlayUI();
-    }).catch(() => {});
+    } catch {}
+  } else {
+    state.isPlaying = false;
   }
+  updateHeaderState();
 }
 
-function togglePlay() {
-  if (state.currentIndex === -1 && state.playlist.length > 0) {
-    loadTrack(0, true);
+async function togglePlay() {
+  if (state.currentIndex === -1 && state.playlist.length) {
+    await loadTrack(0, true);
     return;
   }
+  if (state.currentIndex === -1) return;
 
   if (state.isPlaying) {
     audio.pause();
     state.isPlaying = false;
   } else {
-    audio.play().then(() => { state.isPlaying = true; updatePlayUI(); }).catch(() => {});
+    try {
+      await audio.play();
+      state.isPlaying = true;
+    } catch {}
   }
-  updatePlayUI();
+  updateHeaderState();
 }
 
-function updatePlayUI() {
-  elPlayIcon.classList.toggle('hidden', state.isPlaying);
-  elPauseIcon.classList.toggle('hidden', !state.isPlaying);
-  elVinyl.classList.toggle('playing', state.isPlaying);
-}
-
-// ── Playlist rendering ──
-function renderPlaylist() {
-  elTrackCount.textContent = `${state.playlist.length} titre${state.playlist.length !== 1 ? 's' : ''}`;
-  elPlaylist.innerHTML = '';
-  state.playlist.forEach((t, i) => {
-    const li = document.createElement('li');
-    li.classList.toggle('active', i === state.currentIndex);
-    li.innerHTML = `
-      <span class="track-num">${i + 1}</span>
-      <span class="track-title">${stripExt(t.name)}</span>
-      <span class="track-dur" data-url="${t.url}">—</span>
-      <button class="btn-remove" title="Supprimer">✕</button>
-    `;
-    li.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-remove')) return;
-      loadTrack(i, true);
-    });
-    li.querySelector('.btn-remove').addEventListener('click', () => removeTrack(i));
-    elPlaylist.appendChild(li);
-
-    // Load duration
-    const dur = li.querySelector('.track-dur');
-    const tmp = new Audio();
-    tmp.src = t.url;
-    tmp.addEventListener('loadedmetadata', () => {
-      dur.textContent = fmt(tmp.duration);
-    });
-  });
-}
-
-function removeTrack(index) {
+async function removeTrack(index) {
   const track = state.playlist[index];
-  fetch(`/api/files/music/${encodeURIComponent(track.name)}`, { method: 'DELETE' })
-    .then(() => {
-      state.playlist.splice(index, 1);
-      if (state.currentIndex === index) {
-        audio.pause();
-        state.isPlaying = false;
-        state.currentIndex = -1;
-        elTrackName.textContent = 'Aucune piste';
-        elTrackIndex.textContent = '—';
-        updatePlayUI();
-        if (state.playlist.length > 0) loadTrack(Math.min(index, state.playlist.length - 1), false);
-      } else if (state.currentIndex > index) {
-        state.currentIndex--;
-      }
-      renderPlaylist();
-    })
-    .catch(() => notify('Erreur lors de la suppression', 'error'));
-}
-
-// ── FX Sound System ──
-let fxAudio = null;
-let playingFxIndex = -1;
-
-function fxDefaults(f) {
-  if (f.volume === undefined) f.volume = 1;
-  if (f.position === undefined) f.position = 'bottom';
-  return f;
+  if (!track) return;
+  try {
+    const res = await fetch(`/api/files/music/${encodeURIComponent(track.name)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    state.playlist.splice(index, 1);
+    if (state.currentIndex === index) {
+      audio.pause();
+      state.isPlaying = false;
+      state.currentIndex = -1;
+      renderNowPlaying();
+      drawWaveform(0);
+      els.timeCurrent.textContent = '0:00';
+      els.timeTotal.textContent = '0:00';
+      els.waveformProgress.style.width = '0%';
+      els.seekHandle.style.left = '0%';
+    } else if (state.currentIndex > index) {
+      state.currentIndex -= 1;
+    }
+    renderPlaylist();
+    if (isMobile()) syncOpenedMobileSheet();
+    updateHeaderState();
+    notify(`"${stripExt(track.name)}" supprimé`);
+  } catch {
+    notify('Erreur lors de la suppression du titre', 'error');
+  }
 }
 
 function playFxSound(index) {
-  if (fxAudio) { fxAudio.pause(); fxAudio.currentTime = 0; fxAudio = null; }
-  playingFxIndex = index;
+  stopFx(true);
   const fx = state.fxSounds[index];
-  fxAudio = new Audio(fx.url);
-  fxAudio.volume = fx.volume;
-  fxAudio.play().catch(() => {});
-  fxAudio.addEventListener('ended', () => {
-    playingFxIndex = -1; fxAudio = null;
-    renderFxList(); renderFxStrips();
-  });
-  renderFxList(); renderFxStrips();
+  if (!fx) return;
+  state.playingFxIndex = index;
+  state.fxAudio = new Audio(fx.url);
+  state.fxAudio.volume = fx.volume;
+  state.fxAudio.play().catch(() => {});
+  state.fxAudio.addEventListener('ended', () => stopFx(true), { once: true });
+  renderFxAdmin();
+  renderFxStrips();
 }
 
-function stopFx() {
-  if (fxAudio) { fxAudio.pause(); fxAudio.currentTime = 0; fxAudio = null; }
-  playingFxIndex = -1;
-  renderFxList(); renderFxStrips();
+function stopFx(silent = false) {
+  if (state.fxAudio) {
+    state.fxAudio.pause();
+    state.fxAudio.currentTime = 0;
+  }
+  state.fxAudio = null;
+  state.playingFxIndex = -1;
+  renderFxAdmin();
+  renderFxStrips();
+  if (!silent) notify('FX arrêté');
 }
 
 function moveFx(index, dir) {
   const target = index + dir;
   if (target < 0 || target >= state.fxSounds.length) return;
   [state.fxSounds[index], state.fxSounds[target]] = [state.fxSounds[target], state.fxSounds[index]];
-  if (playingFxIndex === index) playingFxIndex = target;
-  else if (playingFxIndex === target) playingFxIndex = index;
-  renderFxList(); renderFxStrips();
+  if (state.playingFxIndex === index) state.playingFxIndex = target;
+  else if (state.playingFxIndex === target) state.playingFxIndex = index;
+  renderFxAdmin();
+  renderFxStrips();
+  if (isMobile()) syncOpenedMobileSheet();
 }
 
-function setFxPosition(index, pos) {
-  state.fxSounds[index].position = pos;
-  renderFxList(); renderFxStrips();
+function setFxPosition(index, position) {
+  state.fxSounds[index].position = position;
+  renderFxAdmin();
+  renderFxStrips();
+  if (isMobile()) syncOpenedMobileSheet();
 }
 
-function setFxVolume(index, vol) {
-  state.fxSounds[index].volume = vol;
-  if (playingFxIndex === index && fxAudio) fxAudio.volume = vol;
+function setFxVolume(index, value) {
+  state.fxSounds[index].volume = value;
+  if (state.playingFxIndex === index && state.fxAudio) state.fxAudio.volume = value;
+  renderFxAdmin();
+  renderFxStrips();
+  if (isMobile()) syncOpenedMobileSheet();
 }
 
-function renderFxList() {
-  elFxCount.textContent = `(${state.fxSounds.length})`;
-  elFxList.innerHTML = '';
-  state.fxSounds.forEach((f, i) => {
-    const playing = i === playingFxIndex;
-    const div = document.createElement('div');
-    div.className = `fx-item${playing ? ' playing' : ''}`;
-    div.innerHTML = `
-      <div class="fx-item-top">
-        <div class="fx-item-reorder">
-          <button class="fx-move-btn" data-dir="-1" title="Monter">▲</button>
-          <button class="fx-move-btn" data-dir="1" title="Descendre">▼</button>
-        </div>
-        <span class="fx-item-name">${stripExt(f.name)}</span>
-        <div class="fx-pos-toggle">
-          <button class="fx-pos-btn${f.position === 'top' ? ' active' : ''}" data-pos="top">HAUT</button>
-          <button class="fx-pos-btn${f.position === 'bottom' ? ' active' : ''}" data-pos="bottom">BAS</button>
-        </div>
-        <button class="btn-remove" title="Supprimer">✕</button>
-      </div>
-      <div class="fx-item-vol">
-        <span class="fx-vol-label">Vol</span>
-        <input type="range" class="slider fx-vol-slider" min="0" max="1" step="0.01" value="${f.volume}">
-        <span class="fx-vol-val">${Math.round(f.volume * 100)}%</span>
+async function removeFxSound(index) {
+  const fx = state.fxSounds[index];
+  if (!fx) return;
+  try {
+    const res = await fetch(`/api/files/fx/${encodeURIComponent(fx.name)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    if (state.playingFxIndex === index) stopFx(true);
+    else if (state.playingFxIndex > index) state.playingFxIndex -= 1;
+    state.fxSounds.splice(index, 1);
+    renderFxAdmin();
+    renderFxStrips();
+    if (isMobile()) syncOpenedMobileSheet();
+    notify(`FX "${stripExt(fx.name)}" supprimé`);
+  } catch {
+    notify('Erreur lors de la suppression du FX', 'error');
+  }
+}
+
+function buildFxStrip(container, items) {
+  container.innerHTML = '';
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'muted-note';
+    empty.textContent = 'Aucun FX ici.';
+    container.appendChild(empty);
+    return;
+  }
+
+  items.forEach(({ fx, index }) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `fx-pad ${state.playingFxIndex === index ? 'playing' : ''}`;
+    card.innerHTML = `
+      <div class="fx-name">${escapeHtml(stripExt(fx.name))}</div>
+      <input class="range fx-range" type="range" min="0" max="1" step="0.01" value="${fx.volume}">
+      <div class="fx-mini-meta">
+        <span>${fx.position.toUpperCase()}</span>
+        <span>${Math.round(fx.volume * 100)}%</span>
       </div>
     `;
-    div.querySelectorAll('.fx-move-btn').forEach(btn => {
-      btn.addEventListener('click', () => moveFx(i, parseInt(btn.dataset.dir)));
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('fx-range')) return;
+      playFxSound(index);
     });
-    div.querySelectorAll('.fx-pos-btn').forEach(btn => {
-      btn.addEventListener('click', () => setFxPosition(i, btn.dataset.pos));
+    card.querySelector('.fx-range').addEventListener('input', (e) => {
+      e.stopPropagation();
+      setFxVolume(index, parseFloat(e.target.value));
     });
-    div.querySelector('.btn-remove').addEventListener('click', () => removeFxSound(i));
-    const volSlider = div.querySelector('.fx-vol-slider');
-    const volVal = div.querySelector('.fx-vol-val');
-    volSlider.addEventListener('input', () => {
-      const v = parseFloat(volSlider.value);
-      volVal.textContent = Math.round(v * 100) + '%';
-      setFxVolume(i, v);
-    });
-    elFxList.appendChild(div);
+    container.appendChild(card);
   });
 }
 
 function renderFxStrips() {
-  ['top', 'bottom'].forEach(pos => {
-    const strip = document.getElementById(`fx-strip-${pos}`);
-    strip.innerHTML = '';
-    const fxInPos = state.fxSounds.filter(f => f.position === pos);
-    if (fxInPos.length === 0) { strip.style.display = 'none'; return; }
-    strip.style.display = 'flex';
-    fxInPos.forEach(f => {
-      const realIndex = state.fxSounds.indexOf(f);
-      const playing = realIndex === playingFxIndex;
-      const btn = document.createElement('button');
-      btn.className = `fx-deck-btn${playing ? ' playing' : ''}`;
-      btn.innerHTML = `
-        <span class="fx-deck-name">${stripExt(f.name)}</span>
-        <div class="fx-deck-vol-wrap" title="Volume">
-          <input type="range" class="fx-deck-vol" min="0" max="1" step="0.01" value="${f.volume}">
+  const top = state.fxSounds.map((fx, index) => ({ fx, index })).filter(({ fx }) => fx.position === 'top');
+  const bottom = state.fxSounds.map((fx, index) => ({ fx, index })).filter(({ fx }) => fx.position === 'bottom');
+  els.fxTopCount.textContent = top.length;
+  els.fxBottomCount.textContent = bottom.length;
+  buildFxStrip(els.fxStripTop, top);
+  buildFxStrip(els.fxStripBottom, bottom);
+}
+
+function renderFxAdmin(target = els.fxAdminList, mobile = false) {
+  target.innerHTML = '';
+  if (!state.fxSounds.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'Aucun FX disponible.';
+    target.appendChild(empty);
+    return;
+  }
+
+  state.fxSounds.forEach((fx, index) => {
+    const card = document.createElement('div');
+    card.className = `fx-card ${state.playingFxIndex === index ? 'playing' : ''}`;
+    card.innerHTML = `
+      <div class="fx-top">
+        <div class="fx-reorder">
+          <button class="icon-btn" data-dir="-1" type="button">↑</button>
+          <button class="icon-btn" data-dir="1" type="button">↓</button>
         </div>
-      `;
-      btn.addEventListener('click', (e) => {
-        if (e.target.classList.contains('fx-deck-vol')) return;
-        playFxSound(realIndex);
+        <div class="fx-title">${escapeHtml(stripExt(fx.name))}</div>
+        <button class="icon-btn bad" data-role="remove" type="button">✕</button>
+      </div>
+      <div>
+        <div class="segmented">
+          <button data-pos="top" type="button" class="${fx.position === 'top' ? 'active' : ''}">HAUT</button>
+          <button data-pos="bottom" type="button" class="${fx.position === 'bottom' ? 'active' : ''}">BAS</button>
+        </div>
+      </div>
+      <div class="fx-bottom">
+        <input class="range" type="range" min="0" max="1" step="0.01" value="${fx.volume}">
+        <div class="track-duration">${Math.round(fx.volume * 100)}%</div>
+      </div>
+    `;
+
+    card.querySelectorAll('[data-dir]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        moveFx(index, Number(btn.dataset.dir));
+        if (mobile) openMobileFx();
       });
-      const volSlider = btn.querySelector('.fx-deck-vol');
-      volSlider.addEventListener('input', (e) => {
-        e.stopPropagation();
-        setFxVolume(realIndex, parseFloat(e.target.value));
-      });
-      volSlider.addEventListener('click', e => e.stopPropagation());
-      strip.appendChild(btn);
     });
+    card.querySelectorAll('[data-pos]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setFxPosition(index, btn.dataset.pos);
+        if (mobile) openMobileFx();
+      });
+    });
+    card.querySelector('[data-role="remove"]').addEventListener('click', async () => {
+      await removeFxSound(index);
+      if (mobile) openMobileFx();
+    });
+    card.querySelector('.range').addEventListener('input', (e) => {
+      setFxVolume(index, parseFloat(e.target.value));
+      if (mobile) openMobileFx();
+    });
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button') || e.target.closest('input')) return;
+      playFxSound(index);
+      if (mobile) openMobileFx();
+    });
+    target.appendChild(card);
   });
 }
 
-function removeFxSound(index) {
-  const fx = state.fxSounds[index];
-  fetch(`/api/files/fx/${encodeURIComponent(fx.name)}`, { method: 'DELETE' })
-    .then(() => {
-      if (playingFxIndex === index) stopFx();
-      else if (playingFxIndex > index) playingFxIndex--;
-      state.fxSounds.splice(index, 1);
-      renderFxList(); renderFxStrips();
-    })
-    .catch(() => notify('Erreur lors de la suppression', 'error'));
-}
-
-// ── Load files from server ──
-function loadFiles() {
-  Promise.all([
-    fetch('/api/files/music').then(r => r.json()),
-    fetch('/api/files/fx').then(r => r.json()),
-  ]).then(([music, fx]) => {
-    state.playlist = music;
-    state.fxSounds = fx.map(fxDefaults);
+async function loadFiles() {
+  try {
+    const [music, fx] = await Promise.all([
+      fetch('/api/files/music').then(r => r.json()),
+      fetch('/api/files/fx').then(r => r.json()),
+    ]);
+    state.playlist = Array.isArray(music) ? music : [];
+    state.fxSounds = Array.isArray(fx) ? fx.map(fxDefaults) : [];
     renderPlaylist();
-    renderFxList();
+    renderFxAdmin();
     renderFxStrips();
-    redrawWaveform(0);
-  });
+    renderNowPlaying();
+    updateHeaderState();
+    drawWaveform(0);
+  } catch {
+    notify('Impossible de charger les fichiers du serveur', 'error');
+  }
 }
 
-// ── Upload ──
 async function uploadFile(file, type) {
   const fd = new FormData();
   fd.append('file', file);
-  let res;
-  try {
-    res = await fetch(`/api/upload/${type}`, { method: 'POST', body: fd });
-  } catch (e) {
-    throw new Error(`Impossible de joindre le serveur (${e.message})`);
-  }
+  const res = await fetch(`/api/upload/${type}`, { method: 'POST', body: fd });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `Erreur ${res.status}`);
   return json;
 }
 
-async function handleFiles(files) {
-  const type = state.currentUploadTab;
-  const prog = document.getElementById('upload-progress');
-  prog.classList.remove('hidden');
-  document.getElementById('progress-fill').style.width = '0%';
-
-  for (const file of files) {
-    try {
-      const result = await uploadFile(file, type);
-      if (type === 'music') {
-        if (!state.playlist.find(t => t.name === result.name)) {
-          state.playlist.push(result);
-          renderPlaylist();
-        }
-      } else {
-        if (!state.fxSounds.find(f => f.name === result.name)) {
-          state.fxSounds.push(fxDefaults(result));
-          renderFxList(); renderFxStrips();
-        }
-      }
-      notify(`"${stripExt(result.name)}" ajouté`);
-    } catch (err) {
-      notify(err.message, 'error');
-    }
-  }
-
-  prog.classList.add('hidden');
+function appendUploadRow(name, status) {
+  const row = document.createElement('div');
+  row.className = 'upload-row';
+  row.innerHTML = `<span>${escapeHtml(name)}</span><strong>${escapeHtml(status)}</strong>`;
+  els.uploadLog.appendChild(row);
+  return row;
 }
 
-// ── Event listeners ──
+async function handleFiles(fileList) {
+  const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.mp3'));
+  if (!files.length) {
+    notify('Seuls les MP3 sont acceptés', 'error');
+    return;
+  }
+  els.uploadLog.innerHTML = '';
+  for (const file of files) {
+    const row = appendUploadRow(file.name, 'Envoi...');
+    try {
+      const result = await uploadFile(file, state.currentUploadTab);
+      row.lastElementChild.textContent = 'OK';
+      row.lastElementChild.style.color = '#86efac';
+      if (state.currentUploadTab === 'music') {
+        if (!state.playlist.find(t => t.name === result.name)) state.playlist.push(result);
+        renderPlaylist();
+      } else {
+        if (!state.fxSounds.find(fx => fx.name === result.name)) state.fxSounds.push(fxDefaults(result));
+        renderFxAdmin();
+        renderFxStrips();
+      }
+      updateHeaderState();
+      notify(`"${stripExt(result.name)}" ajouté`);
+    } catch (error) {
+      row.lastElementChild.textContent = error.message || 'Erreur';
+      row.lastElementChild.style.color = '#fca5a5';
+      notify(error.message || 'Erreur pendant l’envoi', 'error');
+    }
+  }
+}
 
-// Play/Pause
+function isMobile() {
+  return window.innerWidth <= 920;
+}
+
+function openUploadSheet() {
+  els.uploadSheet.classList.remove('hidden');
+  els.uploadSheet.setAttribute('aria-hidden', 'false');
+}
+function closeUploadSheet() {
+  els.uploadSheet.classList.add('hidden');
+  els.uploadSheet.setAttribute('aria-hidden', 'true');
+}
+
+function openMobileSheet(title, kicker, renderer) {
+  if (!isMobile()) return;
+  els.mobileSheetTitle.textContent = title;
+  els.mobileSheetKicker.textContent = kicker;
+  els.mobileSheet.classList.remove('hidden');
+  els.mobileSheet.setAttribute('aria-hidden', 'false');
+  renderer(els.mobileSheetBody);
+  state._mobileRenderer = renderer;
+  state._mobileTitle = title;
+  state._mobileKicker = kicker;
+}
+function closeMobileSheet() {
+  els.mobileSheet.classList.add('hidden');
+  els.mobileSheet.setAttribute('aria-hidden', 'true');
+}
+function syncOpenedMobileSheet() {
+  if (!els.mobileSheet.classList.contains('hidden') && typeof state._mobileRenderer === 'function') {
+    openMobileSheet(state._mobileTitle, state._mobileKicker, state._mobileRenderer);
+  }
+}
+function openMobilePlaylist() {
+  openMobileSheet('Playlist', 'Bibliothèque musique', target => renderPlaylist(target, true));
+}
+function openMobileFx() {
+  openMobileSheet('Administration FX', 'Ordre, position, volume', target => renderFxAdmin(target, true));
+}
+
 document.getElementById('btn-play').addEventListener('click', togglePlay);
-
-// Prev
 document.getElementById('btn-prev').addEventListener('click', () => {
-  if (state.playlist.length === 0) return;
-  const idx = state.currentIndex <= 0 ? state.playlist.length - 1 : state.currentIndex - 1;
-  loadTrack(idx, state.isPlaying);
+  if (!state.playlist.length) return;
+  const nextIndex = state.currentIndex <= 0 ? state.playlist.length - 1 : state.currentIndex - 1;
+  loadTrack(nextIndex, state.isPlaying);
 });
-
-// Next
 document.getElementById('btn-next').addEventListener('click', () => {
-  if (state.playlist.length === 0) return;
-  const idx = (state.currentIndex + 1) % state.playlist.length;
-  loadTrack(idx, state.isPlaying);
+  if (!state.playlist.length) return;
+  const nextIndex = state.currentIndex >= state.playlist.length - 1 ? 0 : state.currentIndex + 1;
+  loadTrack(nextIndex, state.isPlaying);
 });
-
-// Rewind (back to start)
-document.getElementById('btn-rewind').addEventListener('click', () => {
-  audio.currentTime = 0;
-});
-
-// Forward +10s
+document.getElementById('btn-rewind').addEventListener('click', () => { audio.currentTime = 0; });
 document.getElementById('btn-forward').addEventListener('click', () => {
   audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10);
 });
+document.getElementById('btn-loop').addEventListener('click', () => {
+  state.isLooping = !state.isLooping;
+  updateHeaderState();
+});
+document.getElementById('btn-stop-fx').addEventListener('click', () => stopFx());
 
-// Audio events
 audio.addEventListener('timeupdate', () => {
   if (!audio.duration) return;
-  const p = audio.currentTime / audio.duration;
-  elTimeCurrent.textContent = fmt(audio.currentTime);
-  elWaveformProgress.style.width = (p * 100) + '%';
-  elSeekHandle.style.left = (p * 100) + '%';
-  redrawWaveform(p);
+  const progress = audio.currentTime / audio.duration;
+  els.timeCurrent.textContent = fmt(audio.currentTime);
+  els.timeTotal.textContent = fmt(audio.duration);
+  els.waveformProgress.style.width = `${progress * 100}%`;
+  els.seekHandle.style.left = `${progress * 100}%`;
+  drawWaveform(progress);
 });
-
 audio.addEventListener('loadedmetadata', () => {
-  elTimeTotal.textContent = fmt(audio.duration);
+  els.timeTotal.textContent = fmt(audio.duration);
+  els.trackDurationLabel.textContent = fmt(audio.duration);
 });
-
-audio.addEventListener('ended', () => {
+audio.addEventListener('ended', async () => {
   state.isPlaying = false;
-  updatePlayUI();
+  updateHeaderState();
   if (state.isLooping) {
     audio.currentTime = 0;
-    audio.play().then(() => { state.isPlaying = true; updatePlayUI(); });
-  } else if (state.currentIndex < state.playlist.length - 1) {
+    try {
+      await audio.play();
+      state.isPlaying = true;
+    } catch {}
+    updateHeaderState();
+  } else if (state.currentIndex >= 0 && state.currentIndex < state.playlist.length - 1) {
     loadTrack(state.currentIndex + 1, true);
   }
 });
 
-// Waveform seek
-const waveformEl = document.getElementById('waveform');
-waveformEl.addEventListener('click', (e) => {
+els.waveform.addEventListener('click', e => {
   if (!audio.duration) return;
-  const rect = waveformEl.getBoundingClientRect();
-  const p = (e.clientX - rect.left) / rect.width;
-  audio.currentTime = p * audio.duration;
+  const rect = els.waveform.getBoundingClientRect();
+  const percent = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  audio.currentTime = percent * audio.duration;
+});
+els.volume.addEventListener('input', e => {
+  const value = parseFloat(e.target.value);
+  audio.volume = value;
+  els.volumeVal.textContent = `${Math.round(value * 100)}%`;
+});
+els.playlistSearch.addEventListener('input', e => {
+  state.playlistSearch = e.target.value;
+  renderPlaylist();
+  if (isMobile() && state._mobileTitle === 'Playlist') openMobilePlaylist();
+});
+document.getElementById('btn-clear-search').addEventListener('click', () => {
+  state.playlistSearch = '';
+  els.playlistSearch.value = '';
+  renderPlaylist();
+  if (isMobile() && state._mobileTitle === 'Playlist') openMobilePlaylist();
 });
 
-// Volume
-document.getElementById('volume').addEventListener('input', (e) => {
-  const val = parseFloat(e.target.value);
-  audio.volume = val;
-  document.getElementById('volume-val').textContent = Math.round(val * 100) + '%';
+document.getElementById('btn-open-upload').addEventListener('click', openUploadSheet);
+document.getElementById('btn-close-upload').addEventListener('click', closeUploadSheet);
+els.uploadSheet.addEventListener('click', e => {
+  if (e.target === els.uploadSheet) closeUploadSheet();
 });
-
-// Pitch
-document.getElementById('pitch').addEventListener('input', (e) => {
-  const val = parseFloat(e.target.value);
-  audio.playbackRate = val;
-  document.getElementById('pitch-val').textContent = val.toFixed(2) + 'x';
-  // Update slider gradient
-  const pct = ((val - 0.5) / 1.5) * 100;
-  e.target.style.background = `linear-gradient(to right, #2a2a40 0%, #2a2a40 ${pct}%, #7c3aed ${pct}%, #7c3aed 100%)`;
-});
-
-// Loop
-document.getElementById('btn-loop').addEventListener('click', () => {
-  state.isLooping = !state.isLooping;
-  document.getElementById('btn-loop').textContent = state.isLooping ? 'ON' : 'OFF';
-  document.getElementById('btn-loop').classList.toggle('active', state.isLooping);
-});
-
-// Upload toggle
-document.getElementById('btn-upload-toggle').addEventListener('click', () => {
-  document.getElementById('upload-panel').classList.toggle('hidden');
-});
-document.getElementById('btn-close-upload').addEventListener('click', () => {
-  document.getElementById('upload-panel').classList.add('hidden');
-});
-
-// Upload tabs
-document.querySelectorAll('.upload-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.upload-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    state.currentUploadTab = tab.dataset.tab;
+document.querySelectorAll('[data-upload-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-upload-tab]').forEach(x => x.classList.remove('active'));
+    btn.classList.add('active');
+    state.currentUploadTab = btn.dataset.uploadTab;
   });
 });
-
-// File input
-document.getElementById('file-input').addEventListener('change', (e) => {
-  if (e.target.files.length) handleFiles(Array.from(e.target.files));
+els.dropZone.addEventListener('click', () => els.fileInput.click());
+els.fileInput.addEventListener('change', e => {
+  if (e.target.files?.length) handleFiles(e.target.files);
   e.target.value = '';
 });
-
-// Click on drop zone opens file picker
-const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('click', (e) => {
-  if (e.target.tagName !== 'LABEL') document.getElementById('file-input').click();
-});
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
+els.dropZone.addEventListener('dragover', e => {
   e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.mp3'));
-  if (files.length) handleFiles(files);
+  els.dropZone.classList.add('dragover');
+});
+els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('dragover'));
+els.dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  els.dropZone.classList.remove('dragover');
+  if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
 });
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  const tag = e.target.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-  switch (e.code) {
-    case 'Space': e.preventDefault(); togglePlay(); break;
-    case 'ArrowRight': audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 5); break;
-    case 'ArrowLeft': audio.currentTime = Math.max(0, audio.currentTime - 5); break;
-    case 'ArrowUp': {
-      const v = document.getElementById('volume');
-      v.value = Math.min(1, parseFloat(v.value) + 0.05);
-      v.dispatchEvent(new Event('input'));
-      break;
-    }
-    case 'ArrowDown': {
-      const v = document.getElementById('volume');
-      v.value = Math.max(0, parseFloat(v.value) - 0.05);
-      v.dispatchEvent(new Event('input'));
-      break;
-    }
-    case 'KeyN': {
-      if (state.playlist.length === 0) return;
-      loadTrack((state.currentIndex + 1) % state.playlist.length, state.isPlaying);
-      break;
-    }
-    case 'KeyP': {
-      if (state.playlist.length === 0) return;
-      const idx = state.currentIndex <= 0 ? state.playlist.length - 1 : state.currentIndex - 1;
-      loadTrack(idx, state.isPlaying);
-      break;
-    }
+document.getElementById('btn-mobile-playlist').addEventListener('click', openMobilePlaylist);
+document.getElementById('btn-mobile-fx').addEventListener('click', openMobileFx);
+document.getElementById('btn-close-mobile-sheet').addEventListener('click', closeMobileSheet);
+els.mobileSheet.addEventListener('click', e => {
+  if (e.target === els.mobileSheet) closeMobileSheet();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeUploadSheet();
+    closeMobileSheet();
   }
 });
 
-// Resize waveform on window resize
 window.addEventListener('resize', () => {
-  const p = audio.duration ? audio.currentTime / audio.duration : 0;
-  redrawWaveform(p);
+  drawWaveform(audio.duration ? audio.currentTime / audio.duration : 0);
+  if (!isMobile()) closeMobileSheet();
 });
 
-// ── Mobile navigation ──
-const isMobile = () => window.innerWidth <= 860;
-
-function setMobilePanel(name) {
-  const panels = {
-    deck: document.getElementById('panel-deck'),
-    playlist: document.getElementById('panel-playlist'),
-    fx: document.getElementById('panel-fx'),
-  };
-  Object.entries(panels).forEach(([key, el]) => {
-    el.classList.toggle('mobile-active', key === name);
-  });
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.panel === name);
-  });
-}
-
-document.querySelectorAll('.nav-tab').forEach(tab => {
-  tab.addEventListener('click', () => setMobilePanel(tab.dataset.panel));
-});
-
-// Init mobile panel
-if (isMobile()) setMobilePanel('deck');
-
-window.addEventListener('resize', () => {
-  if (isMobile()) {
-    // ensure one panel is active
-    const hasActive = document.querySelector('.mobile-active');
-    if (!hasActive) setMobilePanel('deck');
-  }
-});
-
-// ── Init ──
 loadFiles();
-redrawWaveform(0);
+updateHeaderState();
+renderNowPlaying();
+drawWaveform(0);

@@ -1,161 +1,187 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>JuxBox</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="app">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">JX</div>
+        <div>
+          <div class="brand-title">JuxBox</div>
+          <div class="brand-subtitle">Deck mobile</div>
+        </div>
+      </div>
 
-    <!-- Header -->
-    <header>
-      <div class="logo">JUX<span>BOX</span></div>
-      <div class="header-controls">
-        <button class="btn-upload-main" id="btn-upload-toggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span class="btn-label">Ajouter</span>
-        </button>
+      <div class="topbar-actions">
+        <button id="btn-stop-fx" class="ghost-btn" type="button">Stop FX</button>
+        <button id="btn-open-upload" class="primary-btn" type="button">Ajouter</button>
       </div>
     </header>
 
-    <!-- Upload Panel -->
-    <div id="upload-panel" class="panel hidden">
-      <div class="upload-panel-header">
-        <h3>Ajouter des fichiers</h3>
-        <button class="btn-close-panel" id="btn-close-upload">✕</button>
-      </div>
-      <div class="upload-tabs">
-        <button class="upload-tab active" data-tab="music">Musiques</button>
-        <button class="upload-tab" data-tab="fx">Effets (FX)</button>
-      </div>
-      <div class="upload-drop-zone" id="drop-zone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
-        <p>Appuie ou glisse tes MP3 ici</p>
-        <input type="file" id="file-input" accept=".mp3,audio/mpeg" multiple hidden>
-      </div>
-      <div id="upload-progress" class="hidden">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-        <span id="progress-label">Envoi...</span>
-      </div>
-    </div>
-
-    <!-- Main layout -->
-    <main>
-
-      <!-- Left: Playlist -->
-      <aside class="playlist-panel" id="panel-playlist">
-        <div class="panel-header">
-          <span>Playlist</span>
-          <span class="track-count" id="track-count">0 titres</span>
+    <main class="app-layout">
+      <aside class="side-panel desktop-only">
+        <div class="panel-head">
+          <div>
+            <h2>Playlist</h2>
+            <p>Bibliothèque musique</p>
+          </div>
+          <span id="track-count">0 titre</span>
         </div>
-        <ul id="playlist"></ul>
+
+        <div class="search-wrap">
+          <input id="playlist-search" type="search" placeholder="Rechercher un titre..." />
+          <button id="btn-clear-search" type="button">Effacer</button>
+        </div>
+
+        <div id="playlist-list" class="playlist-list"></div>
       </aside>
 
-      <!-- Center: Deck -->
-      <section class="deck" id="panel-deck">
-
-        <!-- FX Strip Top -->
-        <div class="fx-strip fx-strip-top" id="fx-strip-top"></div>
-
-        <!-- Now playing -->
-        <div class="now-playing">
-          <div class="vinyl" id="vinyl">
-            <div class="vinyl-inner"></div>
-          </div>
-          <div class="track-info">
-            <div class="track-name" id="track-name">Aucune piste</div>
-            <div class="track-index" id="track-index">—</div>
+      <section class="center-panel">
+        <div class="hero-card">
+          <div id="vinyl" class="vinyl"></div>
+          <div class="hero-meta">
+            <span id="play-state-pill" class="pill">En attente</span>
+            <h1 id="track-name">Aucune piste sélectionnée</h1>
+            <div class="hero-sub">
+              <span id="track-index">—</span>
+              <span id="track-duration-label">Durée inconnue</span>
+            </div>
           </div>
         </div>
 
-        <!-- Waveform / Progress -->
-        <div class="waveform-container">
-          <span class="time" id="time-current">0:00</span>
-          <div class="waveform" id="waveform">
+        <div class="wave-card">
+          <div class="wave-head">
+            <span id="time-current">0:00</span>
+            <span>Forme d’onde</span>
+            <span id="time-total">0:00</span>
+          </div>
+          <div id="waveform" class="waveform-wrap">
             <canvas id="waveform-canvas"></canvas>
-            <div class="progress-overlay" id="waveform-progress"></div>
-            <div class="seek-handle" id="seek-handle"></div>
-          </div>
-          <span class="time" id="time-total">0:00</span>
-        </div>
-
-        <!-- Transport controls -->
-        <div class="transport">
-          <button class="btn-transport" id="btn-prev" title="Titre précédent">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-          </button>
-          <button class="btn-transport" id="btn-rewind" title="Retour au début">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm10 0L8 12l8 6V6z"/></svg>
-          </button>
-          <button class="btn-transport btn-play" id="btn-play" title="Play/Pause">
-            <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          </button>
-          <button class="btn-transport" id="btn-forward" title="Avancer de 10s">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2z"/><text x="11" y="16" font-size="6" text-anchor="middle" fill="currentColor">10</text></svg>
-          </button>
-          <button class="btn-transport" id="btn-next" title="Titre suivant">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-          </button>
-        </div>
-
-        <!-- Volume & Pitch & Loop -->
-        <div class="mixer-row">
-          <div class="knob-group">
-            <label>Volume</label>
-            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" class="slider">
-            <span class="slider-val" id="volume-val">80%</span>
-          </div>
-          <div class="knob-group">
-            <label>Pitch</label>
-            <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" class="slider slider-pitch">
-            <span class="slider-val" id="pitch-val">1.00x</span>
-          </div>
-          <div class="loop-control">
-            <label>Loop</label>
-            <button class="btn-loop" id="btn-loop">OFF</button>
+            <div id="waveform-progress" class="wave-progress"></div>
+            <div id="seek-handle" class="wave-handle"></div>
           </div>
         </div>
 
-        <!-- FX Strip Bottom -->
-        <div class="fx-strip fx-strip-bottom" id="fx-strip-bottom"></div>
+        <div class="transport-row">
+          <button id="btn-prev" class="transport-btn" type="button" aria-label="Titre précédent">⏮</button>
+          <button id="btn-rewind" class="transport-btn" type="button" aria-label="Retour au début">↺</button>
+          <button id="btn-play" class="transport-btn transport-play" type="button" aria-label="Lecture ou pause">▶</button>
+          <button id="btn-forward" class="transport-btn" type="button" aria-label="Avancer de 10 secondes">+10</button>
+          <button id="btn-next" class="transport-btn" type="button" aria-label="Titre suivant">⏭</button>
+        </div>
 
+        <div class="control-grid">
+          <section class="control-card">
+            <div class="control-head">
+              <span>Volume</span>
+              <strong id="volume-val">80%</strong>
+            </div>
+            <input id="volume" class="range" type="range" min="0" max="1" step="0.01" value="0.8" />
+            <p>Réglage du deck principal.</p>
+          </section>
+
+          <section class="control-card">
+            <div class="control-head">
+              <span>Loop</span>
+              <strong id="loop-state">OFF</strong>
+            </div>
+            <button id="btn-loop" class="loop-toggle" type="button">
+              <span>Boucle du titre</span>
+              <span id="loop-pill" class="toggle-pill"></span>
+            </button>
+            <p>Relance le morceau à la fin.</p>
+          </section>
+        </div>
+
+        <section class="fx-strip-card">
+          <div class="fx-strip-block">
+            <div class="fx-strip-head">
+              <span>FX haut</span>
+              <span id="fx-top-count">0</span>
+            </div>
+            <div id="fx-strip-top" class="fx-strip-list"></div>
+          </div>
+
+          <div class="fx-strip-block">
+            <div class="fx-strip-head">
+              <span>FX bas</span>
+              <span id="fx-bottom-count">0</span>
+            </div>
+            <div id="fx-strip-bottom" class="fx-strip-list"></div>
+          </div>
+        </section>
       </section>
 
-      <!-- Right: FX Pad -->
-      <aside class="fx-panel" id="panel-fx">
-        <div class="panel-header">
-          <span>FX</span>
+      <aside class="side-panel desktop-only">
+        <div class="panel-head">
+          <div>
+            <h2>Administration FX</h2>
+            <p>Ordre, position, volume</p>
+          </div>
+          <span id="fx-count">0 FX</span>
         </div>
-        <div class="fx-section-label">Sons FX <span id="fx-count">(0)</span></div>
-        <div id="fx-list" class="fx-sound-list"></div>
+
+        <div id="fx-admin-list" class="fx-admin-list"></div>
       </aside>
-
     </main>
-
-    <!-- Mobile bottom nav -->
-    <nav class="mobile-nav" id="mobile-nav">
-      <button class="nav-tab active" data-panel="deck">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
-        <span>Deck</span>
-      </button>
-      <button class="nav-tab" data-panel="playlist">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-        <span>Playlist</span>
-      </button>
-      <button class="nav-tab" data-panel="fx">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18h2V6H7v12zm4 4h2V2h-2v20zm-8-8h2v-4H3v4zm12 4h2V6h-2v12zm4-8v4h2v-4h-2z"/></svg>
-        <span>FX</span>
-      </button>
-    </nav>
-
   </div>
 
+  <div id="upload-sheet" class="overlay hidden" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+      <div class="modal-head">
+        <div>
+          <span class="modal-kicker">Import</span>
+          <h3 id="upload-title">Ajouter des fichiers MP3</h3>
+        </div>
+        <button id="btn-close-upload" class="ghost-btn" type="button">Fermer</button>
+      </div>
+
+      <div class="upload-tabs">
+        <button class="upload-tab active" data-upload-tab="music" type="button">Musiques</button>
+        <button class="upload-tab" data-upload-tab="fx" type="button">Effets / FX</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="drop-zone" class="dropzone">
+          <div>
+            <div class="dropzone-icon">🎵</div>
+            <h3>Glisse-dépose tes MP3 ici</h3>
+            <p>Ou touche la zone pour ouvrir le sélecteur.</p>
+          </div>
+          <input id="file-input" type="file" accept=".mp3,audio/mpeg" multiple hidden />
+        </div>
+        <div id="upload-log" class="upload-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mobile-actions mobile-only">
+    <button id="btn-mobile-playlist" type="button">Playlist</button>
+    <button id="btn-mobile-fx" type="button">FX</button>
+  </div>
+
+  <div id="mobile-sheet" class="overlay hidden" aria-hidden="true">
+    <div class="modal-card mobile-sheet-card" role="dialog" aria-modal="true" aria-labelledby="mobile-sheet-title">
+      <div class="modal-head">
+        <div>
+          <span id="mobile-sheet-kicker" class="modal-kicker">Vue mobile</span>
+          <h3 id="mobile-sheet-title">Contenu</h3>
+        </div>
+        <button id="btn-close-mobile-sheet" class="ghost-btn" type="button">Fermer</button>
+      </div>
+      <div id="mobile-sheet-body" class="modal-body mobile-sheet-body"></div>
+    </div>
+  </div>
+
+  <div id="notif" class="notif"></div>
   <audio id="audio-player" preload="auto"></audio>
   <script src="app.js"></script>
 </body>
