@@ -11,6 +11,32 @@ const PORT = process.env.PORT || 3000;
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+// Seed default FX from /defaults/fx → /uploads/fx (only files that don't already exist).
+// A user-deleted default stays deleted (tracked via .deleted-defaults marker).
+function seedDefaultFx() {
+  const srcDir = path.join(__dirname, 'defaults', 'fx');
+  const dstDir = path.join(__dirname, 'uploads', 'fx');
+  if (!fs.existsSync(srcDir)) return;
+  const markerPath = path.join(dstDir, '.deleted-defaults');
+  const deleted = fs.existsSync(markerPath)
+    ? new Set(fs.readFileSync(markerPath, 'utf8').split('\n').filter(Boolean))
+    : new Set();
+  for (const f of fs.readdirSync(srcDir)) {
+    if (!f.toLowerCase().endsWith('.mp3')) continue;
+    if (deleted.has(f)) continue;
+    const dst = path.join(dstDir, f);
+    if (fs.existsSync(dst)) continue;
+    fs.copyFileSync(path.join(srcDir, f), dst);
+    console.log(`Seeded default FX: ${f}`);
+  }
+}
+seedDefaultFx();
+
+// Track default FX names so deletion records them as user-removed
+const DEFAULT_FX_NAMES = fs.existsSync(path.join(__dirname, 'defaults', 'fx'))
+  ? new Set(fs.readdirSync(path.join(__dirname, 'defaults', 'fx')).filter(f => f.toLowerCase().endsWith('.mp3')))
+  : new Set();
+
 // Storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -69,6 +95,10 @@ app.delete('/api/files/:type/:name', (req, res) => {
   const filepath = path.join(__dirname, 'uploads', type, filename);
   if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'File not found' });
   fs.unlinkSync(filepath);
+  if (type === 'fx' && DEFAULT_FX_NAMES.has(filename)) {
+    const markerPath = path.join(__dirname, 'uploads', 'fx', '.deleted-defaults');
+    fs.appendFileSync(markerPath, filename + '\n');
+  }
   res.json({ success: true });
 });
 

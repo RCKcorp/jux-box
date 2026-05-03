@@ -16,12 +16,75 @@
     <header>
       <div class="logo">JUX<span>BOX</span></div>
       <div class="header-controls">
+        <button class="btn-header" id="btn-settings-toggle" title="Réglages">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          <span class="btn-label" id="playlist-current-label">Tous</span>
+        </button>
         <button class="btn-upload-main" id="btn-upload-toggle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <span class="btn-label">Ajouter</span>
         </button>
       </div>
     </header>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="panel hidden">
+      <div class="upload-panel-header">
+        <h3>Réglages</h3>
+        <button class="btn-close-panel" id="btn-close-settings">✕</button>
+      </div>
+
+      <div class="settings-sections">
+
+        <section class="settings-block">
+          <h4>Lecture</h4>
+          <div class="mixer-row">
+            <div class="knob-group">
+              <label>Pitch</label>
+              <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" class="slider slider-pitch">
+              <span class="slider-val" id="pitch-val">1.00x</span>
+            </div>
+            <div class="loop-control">
+              <label>Loop</label>
+              <button class="btn-loop" id="btn-loop">OFF</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-block">
+          <h4>Random FX</h4>
+          <div class="random-fx-control">
+            <div class="random-fx-row">
+              <label>Auto-FX</label>
+              <button class="btn-loop" id="btn-random-fx">OFF</button>
+            </div>
+            <div class="random-fx-range">
+              <span class="rfx-cap">Délai</span>
+              <input type="number" id="rfx-min" min="1" max="600" value="10" inputmode="numeric"><span class="rfx-unit">s</span>
+              <span class="rfx-sep">–</span>
+              <input type="number" id="rfx-max" min="1" max="600" value="45" inputmode="numeric"><span class="rfx-unit">s</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-block">
+          <h4>Playlists</h4>
+          <div class="upload-tabs">
+            <button class="upload-tab active" data-pltab="select">Choisir</button>
+            <button class="upload-tab" data-pltab="manage">Gérer</button>
+          </div>
+          <div id="pl-select" class="pl-tab-content"></div>
+          <div id="pl-manage" class="pl-tab-content hidden">
+            <form id="pl-create-form" class="pl-create">
+              <input type="text" id="pl-create-input" placeholder="Nom de la nouvelle playlist" autocomplete="off">
+              <button type="submit">Créer</button>
+            </form>
+            <div id="pl-manage-list"></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
 
     <!-- Upload Panel -->
     <div id="upload-panel" class="panel hidden">
@@ -104,21 +167,17 @@
           </button>
         </div>
 
-        <!-- Volume & Pitch & Loop -->
-        <div class="mixer-row">
+        <!-- Volume mixer (compact) -->
+        <div class="deck-volumes">
           <div class="knob-group">
-            <label>Volume</label>
+            <label>Musique</label>
             <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" class="slider">
             <span class="slider-val" id="volume-val">80%</span>
           </div>
           <div class="knob-group">
-            <label>Pitch</label>
-            <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" class="slider slider-pitch">
-            <span class="slider-val" id="pitch-val">1.00x</span>
-          </div>
-          <div class="loop-control">
-            <label>Loop</label>
-            <button class="btn-loop" id="btn-loop">OFF</button>
+            <label>FX</label>
+            <input type="range" id="fx-volume" min="0" max="1" step="0.01" value="1" class="slider">
+            <span class="slider-val" id="fx-volume-val">100%</span>
           </div>
         </div>
 
@@ -154,9 +213,22 @@
       </button>
     </nav>
 
+    <!-- Confirm delete modal -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3>Supprimer ce fichier ?</h3>
+        <p class="modal-target" id="confirm-name"></p>
+        <p class="modal-instruction">Tape <strong>oui</strong> pour confirmer.</p>
+        <input type="text" id="confirm-input" placeholder="oui" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="modal-actions">
+          <button class="btn-cancel" id="confirm-cancel">Annuler</button>
+          <button class="btn-danger" id="confirm-ok" disabled>Supprimer</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <audio id="audio-player" preload="auto"></audio>
   <script src="app.js"></script>
 </body>
 </html>
