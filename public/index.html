@@ -1,234 +1,55 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>JuxBox</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    :root{--bg:#06070b;--card:#11131b;--card2:#181b26;--soft:#222635;--line:rgba(255,255,255,.08);--text:#f7f7fb;--muted:#9da3b4;--accent:#8b5cf6;--accent2:#c084fc;--green:#22c55e;--red:#ef4444;--radius-xl:28px;--radius-lg:22px;--shadow:0 20px 55px rgba(0,0,0,.35);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px)}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}button{border:0;cursor:pointer}body{background:radial-gradient(circle at 50% -10%,rgba(139,92,246,.45),transparent 32%),radial-gradient(circle at 100% 30%,rgba(192,132,252,.18),transparent 28%),#06070b}
+    #app{height:100dvh;display:flex;flex-direction:column;padding:calc(10px + var(--safe-top)) 14px calc(12px + var(--safe-bottom));gap:12px;max-width:520px;margin:0 auto;position:relative}.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-mark{width:42px;height:42px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 10px 28px rgba(139,92,246,.45);font-weight:950;letter-spacing:-1px}.brand-title{line-height:1.05;min-width:0}.brand-title strong{display:block;font-size:1.05rem;letter-spacing:.5px}.brand-title span{display:block;color:var(--muted);font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}.icon-btn{width:44px;height:44px;border-radius:16px;background:rgba(255,255,255,.08);color:var(--text);display:grid;place-items:center;border:1px solid var(--line);backdrop-filter:blur(12px)}.icon-btn svg{width:21px;height:21px}
+    .screen{flex:1;min-height:0;display:none;overflow:hidden}.screen.active{display:flex;flex-direction:column}.hero-card{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid var(--line);border-radius:var(--radius-xl);padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden;flex-shrink:0}.hero-card:before{content:"";position:absolute;inset:-90px -70px auto auto;width:190px;height:190px;background:radial-gradient(circle,rgba(192,132,252,.42),transparent 65%);pointer-events:none}.now-row{display:flex;gap:15px;align-items:center;position:relative;z-index:1}.disc{width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at center,#06070b 0 12%,#2b2f43 13% 18%,transparent 19%),repeating-radial-gradient(circle,#171927 0 5px,#0b0d14 6px 9px);border:2px solid rgba(255,255,255,.08);box-shadow:inset 0 0 0 8px rgba(255,255,255,.025),0 12px 26px rgba(0,0,0,.35);flex-shrink:0;animation:spin 4s linear infinite;animation-play-state:paused}.disc.playing{animation-play-state:running}@keyframes spin{to{transform:rotate(360deg)}}.now-info{min-width:0;flex:1}.eyebrow{color:var(--accent2);font-size:.72rem;text-transform:uppercase;letter-spacing:1.4px;font-weight:850;margin-bottom:7px}.track-name{font-size:1.42rem;font-weight:900;line-height:1.12;letter-spacing:-.03em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.track-sub{margin-top:7px;color:var(--muted);font-size:.86rem}.time-row{display:flex;align-items:center;gap:9px;margin-top:17px;position:relative;z-index:1}.time{width:42px;color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums}.time:last-child{text-align:right}.seek{flex:1;height:44px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid var(--line);position:relative;overflow:hidden;touch-action:none}.seek canvas{width:100%;height:100%;display:block;opacity:.9}.seek-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(139,92,246,.35),rgba(192,132,252,.18));pointer-events:none}.seek-dot{position:absolute;top:50%;left:0;width:18px;height:18px;border-radius:50%;background:var(--text);transform:translate(-50%,-50%);box-shadow:0 0 0 5px rgba(255,255,255,.12);pointer-events:none}.main-actions{display:grid;grid-template-columns:1fr 1.4fr 1fr;align-items:center;gap:11px;margin-top:15px}.round-btn{height:58px;border-radius:20px;display:grid;place-items:center;background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--line)}.round-btn svg{width:25px;height:25px}.play-btn{height:72px;border-radius:26px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 16px 35px rgba(139,92,246,.45)}.play-btn svg{width:34px;height:34px}.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;flex-shrink:0}.quick-card{min-height:86px;padding:14px;border-radius:var(--radius-lg);background:var(--card);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;color:var(--text);text-align:left}.quick-card strong{font-size:.95rem}.quick-card span{color:var(--muted);font-size:.78rem;margin-top:5px}.quick-card.active{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.38)}
+    .list-wrap{flex:1;min-height:0;margin-top:12px;overflow-y:auto;padding-bottom:8px;scrollbar-width:none}.list-wrap::-webkit-scrollbar,.pill-row::-webkit-scrollbar{display:none}.section-title{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px;color:var(--muted);font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:1.2px}.section-title span:last-child{color:var(--accent2)}.song-list,.playlist-list{display:flex;flex-direction:column;gap:9px}.item{display:flex;align-items:center;gap:11px;min-height:64px;border-radius:20px;background:rgba(255,255,255,.065);border:1px solid var(--line);color:var(--text);padding:10px 11px;text-align:left;width:100%}.item.active{background:rgba(139,92,246,.18);border-color:rgba(192,132,252,.36)}.item.playing{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.35)}.item-icon{width:42px;height:42px;border-radius:16px;display:grid;place-items:center;flex-shrink:0;background:var(--soft);color:var(--accent2);font-weight:900}.item-main{flex:1;min-width:0}.item-title{font-weight:850;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.item-sub{color:var(--muted);font-size:.76rem;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mini-btn{width:38px;height:38px;border-radius:14px;background:rgba(255,255,255,.07);color:#fecaca;display:grid;place-items:center;flex-shrink:0}.mini-btn svg{width:18px;height:18px}.pill-row{display:flex;gap:8px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;flex-shrink:0}.pill{white-space:nowrap;border-radius:999px;background:rgba(255,255,255,.07);color:var(--muted);border:1px solid var(--line);padding:10px 14px;font-weight:800;font-size:.84rem}.pill.active{color:#fff;background:rgba(139,92,246,.42);border-color:rgba(192,132,252,.52)}.fx-pad{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fx-btn{min-height:92px;border-radius:24px;padding:14px;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.045));color:var(--text);border:1px solid var(--line);text-align:left;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 12px 24px rgba(0,0,0,.16)}.fx-btn.playing{background:linear-gradient(135deg,rgba(34,197,94,.24),rgba(139,92,246,.18));border-color:rgba(34,197,94,.42)}.fx-btn strong{font-size:.94rem;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.fx-btn span{color:var(--muted);font-size:.72rem;font-weight:750;text-transform:uppercase;letter-spacing:1px}
+    .control-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-xl);padding:16px;margin-bottom:11px}.control-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.control-head strong{font-size:1rem}.control-head span{color:var(--muted);font-size:.84rem}.range{width:100%;accent-color:var(--accent)}input[type=range]{-webkit-appearance:none;height:34px;background:transparent}input[type=range]::-webkit-slider-runnable-track{height:8px;background:var(--soft);border-radius:999px}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:white;margin-top:-10px;box-shadow:0 4px 14px rgba(0,0,0,.35)}.number-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.number-field{background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:11px}.number-field label{display:block;color:var(--muted);font-size:.76rem;margin-bottom:7px}.number-field input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:1.3rem;font-weight:900}.big-action,.secondary-action{width:100%;min-height:54px;border-radius:20px;color:#fff;font-weight:900}.big-action{background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center}.secondary-action{background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--line)}.upload-card{border:1.5px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.055);border-radius:var(--radius-xl);padding:22px 16px;text-align:center;margin-bottom:12px}.upload-card.dragover{border-color:var(--accent2);background:rgba(139,92,246,.15)}.upload-icon{width:64px;height:64px;margin:0 auto 12px;border-radius:24px;display:grid;place-items:center;background:rgba(139,92,246,.2);color:var(--accent2)}.upload-icon svg{width:31px;height:31px}.upload-card strong{display:block;font-size:1.05rem}.upload-card span{display:block;color:var(--muted);font-size:.86rem;margin-top:6px}.progress{height:9px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:12px;display:none}.progress.show{display:block}.progress div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}.bottom-nav{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:rgba(17,19,27,.72);border:1px solid var(--line);border-radius:26px;padding:8px;backdrop-filter:blur(18px);box-shadow:0 16px 38px rgba(0,0,0,.34)}.nav-btn{min-height:58px;border-radius:19px;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.68rem;font-weight:850}.nav-btn svg{width:22px;height:22px}.nav-btn.active{background:rgba(139,92,246,.22);color:#fff}.empty{min-height:170px;display:grid;place-items:center;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--radius-xl);padding:22px}.empty strong{display:block;color:var(--text);margin-bottom:6px}.toast{position:fixed;left:50%;bottom:calc(94px + var(--safe-bottom));transform:translate(-50%,18px);opacity:0;pointer-events:none;z-index:500;background:rgba(20,23,32,.94);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:11px 16px;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.22s ease;box-shadow:0 14px 35px rgba(0,0,0,.35)}.toast.show{opacity:1;transform:translate(-50%,0)}.toast.error{border-color:rgba(239,68,68,.45);color:#fecaca}.sheet{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.62);display:none;align-items:flex-end}.sheet.show{display:flex}.sheet-card{width:100%;max-width:520px;margin:0 auto;background:#11131b;border:1px solid var(--line);border-radius:30px 30px 0 0;padding:18px 16px calc(18px + var(--safe-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.45)}.sheet-title{font-size:1.2rem;font-weight:950;margin-bottom:6px}.sheet-text{color:var(--muted);line-height:1.35;margin-bottom:14px}.sheet-input{width:100%;height:54px;border-radius:18px;border:1px solid var(--line);background:var(--card2);color:var(--text);padding:0 14px;outline:0;margin-bottom:12px;font-size:1rem}.sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.danger-confirm{background:var(--red)!important}.playlist-create{display:flex;gap:8px;margin-bottom:12px}.playlist-create input{flex:1;height:54px;min-width:0;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:0 13px;outline:0}.playlist-create button{width:58px;border-radius:18px;background:var(--accent);color:white;font-size:1.4rem;font-weight:900}.hidden{display:none!important}@media(max-height:720px){.disc{width:76px;height:76px}.track-name{font-size:1.18rem}.hero-card{padding:14px}.play-btn{height:64px}.round-btn{height:52px}.quick-card{min-height:74px}.bottom-nav{padding:6px}.nav-btn{min-height:52px}}
+  </style>
 </head>
 <body>
   <div id="app">
-
-    <!-- Header -->
-    <header>
-      <div class="logo">JUX<span>BOX</span></div>
-      <div class="header-controls">
-        <button class="btn-header" id="btn-settings-toggle" title="Réglages">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-          <span class="btn-label" id="playlist-current-label">Tous</span>
-        </button>
-        <button class="btn-upload-main" id="btn-upload-toggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span class="btn-label">Ajouter</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- Settings Panel -->
-    <div id="settings-panel" class="panel hidden">
-      <div class="upload-panel-header">
-        <h3>Réglages</h3>
-        <button class="btn-close-panel" id="btn-close-settings">✕</button>
-      </div>
-
-      <div class="settings-sections">
-
-        <section class="settings-block">
-          <h4>Lecture</h4>
-          <div class="mixer-row">
-            <div class="knob-group">
-              <label>Pitch</label>
-              <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" class="slider slider-pitch">
-              <span class="slider-val" id="pitch-val">1.00x</span>
-            </div>
-            <div class="loop-control">
-              <label>Loop</label>
-              <button class="btn-loop" id="btn-loop">OFF</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-block">
-          <h4>Random FX</h4>
-          <div class="random-fx-control">
-            <div class="random-fx-row">
-              <label>Auto-FX</label>
-              <button class="btn-loop" id="btn-random-fx">OFF</button>
-            </div>
-            <div class="random-fx-range">
-              <span class="rfx-cap">Délai</span>
-              <input type="number" id="rfx-min" min="1" max="600" value="10" inputmode="numeric"><span class="rfx-unit">s</span>
-              <span class="rfx-sep">–</span>
-              <input type="number" id="rfx-max" min="1" max="600" value="45" inputmode="numeric"><span class="rfx-unit">s</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-block">
-          <h4>Playlists</h4>
-          <div class="upload-tabs">
-            <button class="upload-tab active" data-pltab="select">Choisir</button>
-            <button class="upload-tab" data-pltab="manage">Gérer</button>
-          </div>
-          <div id="pl-select" class="pl-tab-content"></div>
-          <div id="pl-manage" class="pl-tab-content hidden">
-            <form id="pl-create-form" class="pl-create">
-              <input type="text" id="pl-create-input" placeholder="Nom de la nouvelle playlist" autocomplete="off">
-              <button type="submit">Créer</button>
-            </form>
-            <div id="pl-manage-list"></div>
-          </div>
-        </section>
-
-      </div>
-    </div>
-
-    <!-- Upload Panel -->
-    <div id="upload-panel" class="panel hidden">
-      <div class="upload-panel-header">
-        <h3>Ajouter des fichiers</h3>
-        <button class="btn-close-panel" id="btn-close-upload">✕</button>
-      </div>
-      <div class="upload-tabs">
-        <button class="upload-tab active" data-tab="music">Musiques</button>
-        <button class="upload-tab" data-tab="fx">Effets (FX)</button>
-      </div>
-      <div class="upload-drop-zone" id="drop-zone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
-        <p>Appuie ou glisse tes MP3 ici</p>
-        <input type="file" id="file-input" accept=".mp3,audio/mpeg" multiple hidden>
-      </div>
-      <div id="upload-progress" class="hidden">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-        <span id="progress-label">Envoi...</span>
-      </div>
-    </div>
-
-    <!-- Main layout -->
-    <main>
-
-      <!-- Left: Playlist -->
-      <aside class="playlist-panel" id="panel-playlist">
-        <div class="panel-header">
-          <span>Playlist</span>
-          <span class="track-count" id="track-count">0 titres</span>
-        </div>
-        <ul id="playlist"></ul>
-      </aside>
-
-      <!-- Center: Deck -->
-      <section class="deck" id="panel-deck">
-
-        <!-- FX Strip Top -->
-        <div class="fx-strip fx-strip-top" id="fx-strip-top"></div>
-
-        <!-- Now playing -->
-        <div class="now-playing">
-          <div class="vinyl" id="vinyl">
-            <div class="vinyl-inner"></div>
-          </div>
-          <div class="track-info">
-            <div class="track-name" id="track-name">Aucune piste</div>
-            <div class="track-index" id="track-index">—</div>
-          </div>
-        </div>
-
-        <!-- Waveform / Progress -->
-        <div class="waveform-container">
-          <span class="time" id="time-current">0:00</span>
-          <div class="waveform" id="waveform">
-            <canvas id="waveform-canvas"></canvas>
-            <div class="progress-overlay" id="waveform-progress"></div>
-            <div class="seek-handle" id="seek-handle"></div>
-          </div>
-          <span class="time" id="time-total">0:00</span>
-        </div>
-
-        <!-- Transport controls -->
-        <div class="transport">
-          <button class="btn-transport" id="btn-prev" title="Titre précédent">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-          </button>
-          <button class="btn-transport" id="btn-rewind" title="Retour au début">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm10 0L8 12l8 6V6z"/></svg>
-          </button>
-          <button class="btn-transport btn-play" id="btn-play" title="Play/Pause">
-            <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          </button>
-          <button class="btn-transport" id="btn-forward" title="Avancer de 10s">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2z"/><text x="11" y="16" font-size="6" text-anchor="middle" fill="currentColor">10</text></svg>
-          </button>
-          <button class="btn-transport" id="btn-next" title="Titre suivant">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-          </button>
-        </div>
-
-        <!-- Volume mixer (compact) -->
-        <div class="deck-volumes">
-          <div class="knob-group">
-            <label>Musique</label>
-            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" class="slider">
-            <span class="slider-val" id="volume-val">80%</span>
-          </div>
-          <div class="knob-group">
-            <label>FX</label>
-            <input type="range" id="fx-volume" min="0" max="1" step="0.01" value="1" class="slider">
-            <span class="slider-val" id="fx-volume-val">100%</span>
-          </div>
-        </div>
-
-        <!-- FX Strip Bottom -->
-        <div class="fx-strip fx-strip-bottom" id="fx-strip-bottom"></div>
-
-      </section>
-
-      <!-- Right: FX Pad -->
-      <aside class="fx-panel" id="panel-fx">
-        <div class="panel-header">
-          <span>FX</span>
-        </div>
-        <div class="fx-section-label">Sons FX <span id="fx-count">(0)</span></div>
-        <div id="fx-list" class="fx-sound-list"></div>
-      </aside>
-
-    </main>
-
-    <!-- Mobile bottom nav -->
-    <nav class="mobile-nav" id="mobile-nav">
-      <button class="nav-tab active" data-panel="deck">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
-        <span>Deck</span>
-      </button>
-      <button class="nav-tab" data-panel="playlist">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-        <span>Playlist</span>
-      </button>
-      <button class="nav-tab" data-panel="fx">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18h2V6H7v12zm4 4h2V2h-2v20zm-8-8h2v-4H3v4zm12 4h2V6h-2v12zm4-8v4h2v-4h-2z"/></svg>
-        <span>FX</span>
-      </button>
-    </nav>
-
-    <!-- Confirm delete modal -->
-    <div id="confirm-modal" class="modal hidden">
-      <div class="modal-card">
-        <h3>Supprimer ce fichier ?</h3>
-        <p class="modal-target" id="confirm-name"></p>
-        <p class="modal-instruction">Tape <strong>oui</strong> pour confirmer.</p>
-        <input type="text" id="confirm-input" placeholder="oui" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <div class="modal-actions">
-          <button class="btn-cancel" id="confirm-cancel">Annuler</button>
-          <button class="btn-danger" id="confirm-ok" disabled>Supprimer</button>
-        </div>
-      </div>
-    </div>
-
+    <header class="topbar"><div class="brand"><div class="brand-mark">JX</div><div class="brand-title"><strong>JuxBox</strong><span id="active-playlist-label">Tout lire</span></div></div><button class="icon-btn" id="btn-open-upload" aria-label="Ajouter un fichier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></header>
+    <section class="screen active" id="screen-home"><div class="hero-card"><div class="now-row"><div class="disc" id="disc"></div><div class="now-info"><div class="eyebrow" id="status-label">Prêt</div><div class="track-name" id="track-name">Choisis une musique</div><div class="track-sub" id="track-sub">Aucun titre lancé</div></div></div><div class="time-row"><div class="time" id="time-current">0:00</div><div class="seek" id="seek-bar"><canvas id="wave-canvas"></canvas><div class="seek-fill" id="seek-fill"></div><div class="seek-dot" id="seek-dot"></div></div><div class="time" id="time-total">0:00</div></div><div class="main-actions"><button class="round-btn" id="btn-prev" aria-label="Précédent"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 6h2v12H7zm3 6 8 6V6z"/></svg></button><button class="play-btn" id="btn-play" aria-label="Lire ou pause"><svg id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg id="icon-pause" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button><button class="round-btn" id="btn-next" aria-label="Suivant"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m6 18 8-6-8-6zm9-12h2v12h-2z"/></svg></button></div></div><div class="quick-grid"><button class="quick-card" id="btn-loop"><strong>Répéter</strong><span id="loop-label">Désactivé</span></button><button class="quick-card" id="btn-random-fx"><strong>FX surprise</strong><span id="random-label">Désactivé</span></button></div><div class="list-wrap"><div class="section-title"><span>À lancer maintenant</span><span id="home-count">0</span></div><div class="song-list" id="home-song-list"></div></div></section>
+    <section class="screen" id="screen-music"><div class="pill-row" id="playlist-pills"></div><div class="list-wrap" style="margin-top:0"><div class="section-title"><span>Musiques</span><span id="music-count">0</span></div><div class="song-list" id="music-list"></div></div></section>
+    <section class="screen" id="screen-fx"><div class="control-card"><div class="control-head"><strong>Volume des effets</strong><span id="fx-volume-label">100%</span></div><input class="range" id="fx-volume" type="range" min="0" max="1" step="0.01" value="1" /></div><div class="list-wrap" style="margin-top:0"><div class="section-title"><span>Boutons FX</span><span id="fx-count">0</span></div><div class="fx-pad" id="fx-pad"></div></div></section>
+    <section class="screen" id="screen-settings"><div class="list-wrap" style="margin-top:0"><div class="control-card"><div class="control-head"><strong>Volume musique</strong><span id="volume-label">80%</span></div><input class="range" id="volume" type="range" min="0" max="1" step="0.01" value="0.8" /></div><div class="control-card"><div class="control-head"><strong>Vitesse</strong><span id="pitch-label">1.00x</span></div><input class="range" id="pitch" type="range" min="0.5" max="2" step="0.01" value="1" /></div><div class="control-card"><div class="control-head"><strong>FX surprise</strong><span>Délai entre deux sons</span></div><div class="number-row"><div class="number-field"><label>Minimum</label><input id="rfx-min" type="number" min="1" max="600" value="10" inputmode="numeric" /></div><div class="number-field"><label>Maximum</label><input id="rfx-max" type="number" min="1" max="600" value="45" inputmode="numeric" /></div></div></div><div class="control-card"><div class="control-head"><strong>Playlists</strong><span>Groupes simples</span></div><div class="playlist-create"><input id="playlist-name" type="text" placeholder="Nom de la playlist" autocomplete="off" /><button id="btn-create-playlist">+</button></div><div class="playlist-list" id="playlist-manage-list"></div></div></div></section>
+    <nav class="bottom-nav"><button class="nav-btn active" data-screen="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3z"/></svg>Accueil</button><button class="nav-btn" data-screen="music"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3z"/></svg>Musiques</button><button class="nav-btn" data-screen="fx"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 17h3V7H4zm6 4h3V3h-3zm6-6h3V9h-3z"/></svg>FX</button><button class="nav-btn" data-screen="settings"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13.5c.1-.5.1-1 .1-1.5s0-1-.1-1.5l2.1-1.6-2-3.5-2.5 1a7.8 7.8 0 0 0-2.6-1.5L14 2h-4l-.4 2.9A7.8 7.8 0 0 0 7 6.4l-2.5-1-2 3.5 2.1 1.6A9.4 9.4 0 0 0 4.5 12c0 .5 0 1 .1 1.5l-2.1 1.6 2 3.5 2.5-1a7.8 7.8 0 0 0 2.6 1.5L10 22h4l.4-2.9a7.8 7.8 0 0 0 2.6-1.5l2.5 1 2-3.5zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>Réglages</button></nav>
   </div>
-
-  <script src="app.js"></script>
+  <div class="sheet" id="upload-sheet"><div class="sheet-card"><div class="sheet-title">Ajouter des sons</div><div class="sheet-text">Choisis si tu ajoutes une vraie musique ou un petit effet sonore. Seuls les fichiers MP3 sont acceptés.</div><div class="pill-row" style="padding-bottom:12px"><button class="pill active" data-upload-type="music">Musiques</button><button class="pill" data-upload-type="fx">Effets FX</button></div><div class="upload-card" id="upload-zone"><div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg></div><strong>Appuie pour choisir</strong><span>ou glisse tes MP3 ici</span><input id="file-input" type="file" accept=".mp3,audio/mpeg" multiple hidden /><div class="progress" id="upload-progress"><div id="upload-fill"></div></div></div><button class="secondary-action" id="btn-close-upload">Fermer</button></div></div>
+  <div class="sheet" id="confirm-sheet"><div class="sheet-card"><div class="sheet-title">Confirmer</div><div class="sheet-text" id="confirm-text">Tape oui pour supprimer.</div><input class="sheet-input" id="confirm-input" placeholder="oui" autocomplete="off" autocapitalize="off" spellcheck="false" /><div class="sheet-actions"><button class="secondary-action" id="confirm-cancel">Annuler</button><button class="big-action danger-confirm" id="confirm-ok">Supprimer</button></div></div></div>
+  <div class="toast" id="toast"></div>
+  <script>
+    const state={allMusic:[],allFx:[],playlist:[],fxSounds:[],playlists:[],activePlaylistId:null,currentIndex:-1,isLooping:false,isPlaying:false,uploadType:'music',fxVolume:1,fxRandomMin:10,fxRandomMax:45};
+    const PLAYLISTS_KEY='juxbox-playlists',ACTIVE_KEY='juxbox-active-playlist',RANDOM_FX_KEY='juxbox-random-fx-range';
+    const $=id=>document.getElementById(id),fmt=s=>{if(!isFinite(s)||s<0)return'0:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return `${m}:${String(sec).padStart(2,'0')}`},stripExt=name=>name.replace(/\.mp3$/i,''),safeText=v=>String(v??''),escapeHtml=s=>safeText(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),escapeAttr=escapeHtml;
+    function toast(message,type='success'){const el=$('toast');el.textContent=message;el.className=`toast ${type} show`;clearTimeout(el._timer);el._timer=setTimeout(()=>el.classList.remove('show'),2600)}
+    function loadLocalState(){try{state.playlists=JSON.parse(localStorage.getItem(PLAYLISTS_KEY)||'[]')}catch{state.playlists=[]}state.activePlaylistId=localStorage.getItem(ACTIVE_KEY)||null;try{const r=JSON.parse(localStorage.getItem(RANDOM_FX_KEY)||'{}');if(Number.isFinite(r.min))state.fxRandomMin=r.min;if(Number.isFinite(r.max))state.fxRandomMax=r.max}catch{}}
+    function savePlaylists(){localStorage.setItem(PLAYLISTS_KEY,JSON.stringify(state.playlists))}function saveActivePlaylist(){state.activePlaylistId?localStorage.setItem(ACTIVE_KEY,state.activePlaylistId):localStorage.removeItem(ACTIVE_KEY)}function saveRandomFxRange(){localStorage.setItem(RANDOM_FX_KEY,JSON.stringify({min:state.fxRandomMin,max:state.fxRandomMax}))}function getActivePlaylist(){return state.playlists.find(p=>p.id===state.activePlaylistId)||null}function newPlaylistId(){return'pl_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+    function applyPlaylistFilter(){const pl=getActivePlaylist();if(!pl){state.playlist=[...state.allMusic];state.fxSounds=state.allFx.map(f=>({...f}))}else{state.playlist=state.allMusic.filter(t=>(pl.musicNames||[]).includes(t.name));state.fxSounds=state.allFx.filter(f=>(pl.fxNames||[]).includes(f.name)).map(f=>({...f}))}if(state.currentIndex>=state.playlist.length)state.currentIndex=-1}
+    const AC=window.AudioContext||window.webkitAudioContext,ctx=new AC(),masterGain=ctx.createGain();masterGain.gain.value=.8;masterGain.connect(ctx.destination);let unlocked=false;function unlockAudio(){if(ctx.state==='suspended')ctx.resume().catch(()=>{});if(unlocked)return;try{const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);unlocked=true}catch{}}['touchstart','touchend','mousedown','click','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{passive:true}));
+    const bufferCache=new Map();async function loadBuffer(url){if(bufferCache.has(url))return bufferCache.get(url);const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}`);const arr=await r.arrayBuffer();const buf=await new Promise((resolve,reject)=>{try{const p=ctx.decodeAudioData(arr,resolve,reject);if(p&&typeof p.then==='function')p.then(resolve,reject)}catch(e){reject(e)}});bufferCache.set(url,buf);return buf}
+    const music={buffer:null,source:null,startedAt:0,offset:0,playbackRate:1,duration:0,url:null,isPlaying:false};function getCurrentTime(){if(!music.buffer)return 0;if(music.isPlaying)return Math.min(music.duration,music.offset+(ctx.currentTime-music.startedAt)*music.playbackRate);return music.offset}function stopSource(){if(music.source){try{music.source.onended=null;music.source.stop()}catch{}music.source=null}}
+    function startSource(offset){if(!music.buffer)return;stopSource();const off=Math.max(0,Math.min(offset,music.duration)),src=ctx.createBufferSource();src.buffer=music.buffer;src.playbackRate.value=music.playbackRate;src.connect(masterGain);src.onended=()=>{if(music.source===src){music.source=null;music.isPlaying=false;state.isPlaying=false;music.offset=music.duration;handleTrackEnded()}};src.start(0,off);music.source=src;music.startedAt=ctx.currentTime;music.offset=off;music.isPlaying=true;state.isPlaying=true;updatePlayerUI()}function playMusic(){if(!music.buffer||music.isPlaying)return;unlockAudio();if(music.offset>=music.duration)music.offset=0;startSource(music.offset)}function pauseMusic(){if(!music.isPlaying)return;music.offset=Math.min(getCurrentTime(),music.duration);stopSource();music.isPlaying=false;state.isPlaying=false;updatePlayerUI()}function seekMusic(t){if(!music.buffer)return;const target=Math.max(0,Math.min(t,music.duration));if(music.isPlaying)startSource(target);else{music.offset=target;updateProgress(true)}}function setMusicPlaybackRate(v){music.playbackRate=v;if(music.source&&music.isPlaying){music.offset=getCurrentTime();music.startedAt=ctx.currentTime;music.source.playbackRate.value=v}}
+    async function loadTrack(index,autoPlay=true){if(index<0||index>=state.playlist.length)return;unlockAudio();state.currentIndex=index;const track=state.playlist[index];stopSource();Object.assign(music,{buffer:null,offset:0,duration:0,url:track.url,isPlaying:false});state.isPlaying=false;$('track-name').textContent=stripExt(track.name);$('track-sub').textContent=`${index+1} sur ${state.playlist.length}`;$('status-label').textContent='Chargement...';$('time-current').textContent='0:00';$('time-total').textContent='0:00';waveformData=[];updateProgress(true);renderAll();try{const buf=await loadBuffer(track.url);if(music.url!==track.url)return;music.buffer=buf;music.duration=buf.duration;$('time-total').textContent=fmt(buf.duration);waveformData=generateWaveform(buf);drawWaveform(0);$('status-label').textContent=autoPlay?'Lecture':'Prêt';if(autoPlay)startSource(0);updatePlayerUI()}catch(e){$('status-label').textContent='Erreur';toast('Erreur de chargement','error')}}
+    function togglePlay(){unlockAudio();if(state.currentIndex===-1){if(state.playlist.length)loadTrack(0,true);else toast('Ajoute une musique MP3','error');return}if(!music.buffer)return loadTrack(state.currentIndex,true);music.isPlaying?pauseMusic():playMusic()}function handleTrackEnded(){updatePlayerUI();if(state.isLooping)startSource(0);else if(state.currentIndex<state.playlist.length-1)loadTrack(state.currentIndex+1,true);else updatePlayerUI()}function previousTrack(){if(state.currentIndex>0)loadTrack(state.currentIndex-1,true);else if(music.buffer)seekMusic(0)}function nextTrack(){if(state.currentIndex<state.playlist.length-1)loadTrack(state.currentIndex+1,true);else toast('Dernière musique')}function updatePlayerUI(){$('icon-play').classList.toggle('hidden',state.isPlaying);$('icon-pause').classList.toggle('hidden',!state.isPlaying);$('disc').classList.toggle('playing',state.isPlaying);$('status-label').textContent=state.isPlaying?'Lecture':(music.buffer?'Pause':'Prêt');renderSongLists()}
+    let waveformData=[];const canvas=$('wave-canvas'),canvasCtx=canvas.getContext('2d');function generateWaveform(audioBuffer){const raw=audioBuffer.getChannelData(0),samples=160,step=Math.max(1,Math.floor(raw.length/samples)),data=[];for(let i=0;i<samples;i++){let sum=0;for(let j=0;j<step;j++)sum+=Math.abs(raw[i*step+j]||0);data.push(sum/step)}const max=Math.max(...data)||1;return data.map(v=>v/max)}function drawWaveform(progress=0){const ratio=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.max(1,Math.floor(rect.width*ratio));canvas.height=Math.max(1,Math.floor(rect.height*ratio));const W=canvas.width,H=canvas.height;canvasCtx.clearRect(0,0,W,H);const bars=Math.floor(W/7),mid=H/2,cutoff=progress*bars;for(let i=0;i<bars;i++){const idx=Math.floor(i/Math.max(1,bars)*waveformData.length),amp=waveformData.length?waveformData[idx]:.2+.2*Math.sin(i*.7)**2,h=Math.max(4*ratio,amp*H*.72),x=i*(W/bars)+1*ratio,w=Math.max(2*ratio,W/bars-3*ratio);canvasCtx.fillStyle=i<=cutoff?'rgba(255,255,255,.86)':'rgba(255,255,255,.22)';canvasCtx.beginPath();canvasCtx.roundRect(x,mid-h/2,w,h,999);canvasCtx.fill()}}function updateProgress(force=false){if(!music.duration&&!force)return;const t=getCurrentTime(),p=music.duration?Math.min(1,t/music.duration):0;$('time-current').textContent=fmt(t);$('time-total').textContent=fmt(music.duration||0);$('seek-fill').style.width=`${p*100}%`;$('seek-dot').style.left=`${p*100}%`;drawWaveform(p)}function tick(){if(music.isPlaying)updateProgress();requestAnimationFrame(tick)}requestAnimationFrame(tick);
+    let fxSource=null,fxGainNode=null,playingFxIndex=-1,autoFxEnabled=false,autoFxTimer=null;async function playFxSound(index,toggle=true){unlockAudio();if(toggle&&playingFxIndex===index){stopFx();renderFxPad();return}if(fxSource){try{fxSource.onended=null;fxSource.stop()}catch{}}const fx=state.fxSounds[index];if(!fx)return;playingFxIndex=index;renderFxPad();try{const buf=await loadBuffer(fx.url);if(playingFxIndex!==index)return;const src=ctx.createBufferSource(),gain=ctx.createGain();gain.gain.value=state.fxVolume;src.buffer=buf;src.connect(gain).connect(ctx.destination);src.onended=()=>{if(fxSource===src){fxSource=null;fxGainNode=null;playingFxIndex=-1;renderFxPad()}};src.start(0);fxSource=src;fxGainNode=gain}catch{playingFxIndex=-1;renderFxPad();toast('Erreur FX','error')}}function stopFx(){if(fxSource){try{fxSource.onended=null;fxSource.stop()}catch{}}fxSource=null;fxGainNode=null;playingFxIndex=-1}function scheduleNextRandomFx(){if(!autoFxEnabled)return;const lo=Math.max(1,Number(state.fxRandomMin)||1),hi=Math.max(lo,Number(state.fxRandomMax)||lo),delay=(lo+Math.random()*(hi-lo))*1000;autoFxTimer=setTimeout(fireRandomFx,delay)}function fireRandomFx(){if(!autoFxEnabled)return;if(!state.fxSounds.length)return scheduleNextRandomFx();let candidates=state.fxSounds.map((_,i)=>i).filter(i=>i!==playingFxIndex);if(!candidates.length)candidates=state.fxSounds.map((_,i)=>i);playFxSound(candidates[Math.floor(Math.random()*candidates.length)],false);scheduleNextRandomFx()}function setAutoFx(enabled){autoFxEnabled=enabled;if(autoFxTimer)clearTimeout(autoFxTimer);autoFxTimer=null;if(enabled)fireRandomFx();renderQuickControls()}
+    async function fetchFiles(){try{const[musicRes,fxRes]=await Promise.all([fetch('/api/files/music'),fetch('/api/files/fx')]);state.allMusic=musicRes.ok?await musicRes.json():[];state.allFx=fxRes.ok?await fxRes.json():[];state.playlists.forEach(p=>{p.musicNames=(p.musicNames||[]).filter(n=>state.allMusic.some(t=>t.name===n));p.fxNames=(p.fxNames||[]).filter(n=>state.allFx.some(f=>f.name===n))});savePlaylists();applyPlaylistFilter();renderAll()}catch{toast('Impossible de charger les fichiers','error')}}async function uploadFiles(files){const list=[...files].filter(f=>f.name.toLowerCase().endsWith('.mp3')||f.type==='audio/mpeg');if(!list.length)return toast('Choisis des fichiers MP3','error');const progress=$('upload-progress'),fill=$('upload-fill');progress.classList.add('show');let done=0;for(const file of list){const fd=new FormData();fd.append('file',file);try{const r=await fetch(`/api/upload/${state.uploadType}`,{method:'POST',body:fd});if(!r.ok)throw new Error('upload');done++;fill.style.width=`${Math.round(done/list.length*100)}%`}catch{toast(`Erreur avec ${file.name}`,'error')}}await fetchFiles();toast(done>1?`${done} fichiers ajoutés`:'Fichier ajouté');setTimeout(()=>{progress.classList.remove('show');fill.style.width='0%'},500)}function askConfirm(text,onConfirm){$('confirm-text').textContent=text;$('confirm-input').value='';$('confirm-sheet').classList.add('show');setTimeout(()=>$('confirm-input').focus(),80);const cleanup=()=>{$('confirm-sheet').classList.remove('show');$('confirm-ok').onclick=null;$('confirm-cancel').onclick=null};$('confirm-cancel').onclick=cleanup;$('confirm-ok').onclick=()=>{if($('confirm-input').value.trim().toLowerCase()!=='oui')return toast('Tape oui pour confirmer','error');cleanup();onConfirm()}}
+    async function deleteFile(type,name){try{const r=await fetch(`/api/files/${type}/${encodeURIComponent(name)}`,{method:'DELETE'});if(!r.ok)throw new Error('delete');bufferCache.clear();state.playlists.forEach(p=>{p.musicNames=(p.musicNames||[]).filter(n=>n!==name);p.fxNames=(p.fxNames||[]).filter(n=>n!==name)});savePlaylists();if(type==='music'&&state.playlist[state.currentIndex]?.name===name){stopSource();Object.assign(music,{buffer:null,source:null,offset:0,duration:0,url:null,isPlaying:false});state.currentIndex=-1;state.isPlaying=false;$('track-name').textContent='Choisis une musique';$('track-sub').textContent='Aucun titre lancé'}if(type==='fx')stopFx();await fetchFiles();toast('Supprimé')}catch{toast('Erreur de suppression','error')}}function setActivePlaylist(id){const currentName=state.currentIndex>=0?state.playlist[state.currentIndex]?.name:null;state.activePlaylistId=id;saveActivePlaylist();applyPlaylistFilter();state.currentIndex=currentName?state.playlist.findIndex(t=>t.name===currentName):-1;renderAll()}function createPlaylist(){const input=$('playlist-name'),name=input.value.trim();if(!name)return toast('Donne un nom à la playlist','error');state.playlists.push({id:newPlaylistId(),name,musicNames:[],fxNames:[]});input.value='';savePlaylists();renderAll();toast('Playlist créée')}function togglePlaylistContent(plId,type,name){const pl=state.playlists.find(p=>p.id===plId);if(!pl)return;const arr=type==='music'?pl.musicNames:pl.fxNames,i=arr.indexOf(name);i===-1?arr.push(name):arr.splice(i,1);savePlaylists();applyPlaylistFilter();renderAll()}function deletePlaylist(id){state.playlists=state.playlists.filter(p=>p.id!==id);if(state.activePlaylistId===id)state.activePlaylistId=null;savePlaylists();saveActivePlaylist();applyPlaylistFilter();renderAll();toast('Playlist supprimée')}
+    function renderAll(){updateActiveLabel();renderQuickControls();renderPlaylistPills();renderSongLists();renderFxPad();renderSettings();updateProgress(true)}function updateActiveLabel(){const pl=getActivePlaylist();$('active-playlist-label').textContent=pl?pl.name:'Tout lire'}function renderQuickControls(){$('btn-loop').classList.toggle('active',state.isLooping);$('loop-label').textContent=state.isLooping?'Activé':'Désactivé';$('btn-random-fx').classList.toggle('active',autoFxEnabled);$('random-label').textContent=autoFxEnabled?'Activé':'Désactivé'}function renderSongLists(){$('home-count').textContent=state.playlist.length;$('music-count').textContent=state.playlist.length;renderSongList($('home-song-list'),state.playlist.slice(0,8));renderSongList($('music-list'),state.playlist)}function renderSongList(root,tracks){root.innerHTML='';if(!tracks.length){root.innerHTML='<div class="empty"><div><strong>Aucune musique</strong><span>Appuie sur + pour ajouter des MP3.</span></div></div>';return}tracks.forEach(t=>{const realIndex=state.playlist.findIndex(x=>x.name===t.name),btn=document.createElement('div');btn.className=`item ${realIndex===state.currentIndex?'active':''} ${realIndex===state.currentIndex&&state.isPlaying?'playing':''}`;btn.innerHTML=`<button class="item" style="border:0;background:transparent;padding:0;min-height:0;flex:1" data-play="1"><div class="item-icon">${realIndex+1}</div><div class="item-main"><div class="item-title">${escapeHtml(stripExt(t.name))}</div><div class="item-sub">${realIndex===state.currentIndex?(state.isPlaying?'En lecture':'Sélectionné'):'Appuie pour lancer'}</div></div></button><button class="mini-btn" data-delete="music" data-name="${escapeAttr(t.name)}" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 7h12l-1 14H7zm3-4h6l1 2h4v2H4V5h4z"/></svg></button>`;btn.querySelector('[data-play]').onclick=()=>loadTrack(realIndex,true);btn.querySelector('[data-delete]').onclick=()=>askConfirm(`Supprimer “${t.name}” ? Tape oui pour confirmer.`,()=>deleteFile('music',t.name));root.appendChild(btn)})}function renderPlaylistPills(){const root=$('playlist-pills');root.innerHTML='';const all=document.createElement('button');all.className=`pill ${!state.activePlaylistId?'active':''}`;all.textContent='Tout';all.onclick=()=>setActivePlaylist(null);root.appendChild(all);state.playlists.forEach(pl=>{const b=document.createElement('button');b.className=`pill ${state.activePlaylistId===pl.id?'active':''}`;b.textContent=pl.name;b.onclick=()=>setActivePlaylist(pl.id);root.appendChild(b)})}function renderFxPad(){$('fx-count').textContent=state.fxSounds.length;const root=$('fx-pad');root.innerHTML='';if(!state.fxSounds.length){root.innerHTML='<div class="empty" style="grid-column:1/-1"><div><strong>Aucun FX</strong><span>Ajoute des effets depuis le bouton +.</span></div></div>';return}state.fxSounds.forEach((f,i)=>{const btn=document.createElement('button');btn.className=`fx-btn ${playingFxIndex===i?'playing':''}`;btn.innerHTML=`<span>${playingFxIndex===i?'Lecture':'FX'}</span><strong>${escapeHtml(stripExt(f.name))}</strong>`;let pressTimer=null;btn.addEventListener('touchstart',()=>{pressTimer=setTimeout(()=>askConfirm(`Supprimer “${f.name}” ? Tape oui pour confirmer.`,()=>deleteFile('fx',f.name)),700)},{passive:true});btn.addEventListener('touchend',()=>clearTimeout(pressTimer),{passive:true});btn.addEventListener('click',()=>playFxSound(i));root.appendChild(btn)})}
+    function renderSettings(){$('volume-label').textContent=`${Math.round(masterGain.gain.value*100)}%`;$('fx-volume-label').textContent=`${Math.round(state.fxVolume*100)}%`;$('pitch-label').textContent=`${music.playbackRate.toFixed(2)}x`;$('rfx-min').value=state.fxRandomMin;$('rfx-max').value=state.fxRandomMax;const root=$('playlist-manage-list');root.innerHTML='';if(!state.playlists.length){root.innerHTML='<div class="empty"><div><strong>Aucune playlist</strong><span>Crée une playlist, puis ajoute musiques et FX dedans.</span></div></div>';return}state.playlists.forEach(pl=>{const card=document.createElement('div');card.className='control-card';const musicChecks=state.allMusic.map(t=>`<button class="item" data-kind="music" data-name="${escapeAttr(t.name)}"><div class="item-icon">${(pl.musicNames||[]).includes(t.name)?'✓':'+'}</div><div class="item-main"><div class="item-title">${escapeHtml(stripExt(t.name))}</div><div class="item-sub">Musique</div></div></button>`).join(''),fxChecks=state.allFx.map(f=>`<button class="item" data-kind="fx" data-name="${escapeAttr(f.name)}"><div class="item-icon">${(pl.fxNames||[]).includes(f.name)?'✓':'+'}</div><div class="item-main"><div class="item-title">${escapeHtml(stripExt(f.name))}</div><div class="item-sub">FX</div></div></button>`).join('');card.innerHTML=`<div class="control-head"><strong>${escapeHtml(pl.name)}</strong><button class="mini-btn" data-delete-playlist="${pl.id}">×</button></div><div class="song-list">${musicChecks}${fxChecks}</div>`;card.querySelectorAll('[data-kind]').forEach(b=>b.addEventListener('click',()=>togglePlaylistContent(pl.id,b.dataset.kind,b.dataset.name)));card.querySelector('[data-delete-playlist]').addEventListener('click',()=>askConfirm(`Supprimer la playlist “${pl.name}” ? Tape oui pour confirmer.`,()=>deletePlaylist(pl.id)));root.appendChild(card)})}
+    function bindEvents(){$('btn-play').addEventListener('click',togglePlay);$('btn-prev').addEventListener('click',previousTrack);$('btn-next').addEventListener('click',nextTrack);$('btn-loop').addEventListener('click',()=>{state.isLooping=!state.isLooping;renderQuickControls()});$('btn-random-fx').addEventListener('click',()=>setAutoFx(!autoFxEnabled));document.querySelectorAll('.nav-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));btn.classList.add('active');$(`screen-${btn.dataset.screen}`).classList.add('active');drawWaveform(music.duration?getCurrentTime()/music.duration:0)})});$('seek-bar').addEventListener('click',e=>{const rect=$('seek-bar').getBoundingClientRect();seekMusic((e.clientX-rect.left)/rect.width*music.duration)});$('volume').addEventListener('input',e=>{masterGain.gain.value=Number(e.target.value);renderSettings()});$('fx-volume').addEventListener('input',e=>{state.fxVolume=Number(e.target.value);if(fxGainNode)fxGainNode.gain.value=state.fxVolume;renderSettings()});$('pitch').addEventListener('input',e=>{setMusicPlaybackRate(Number(e.target.value));renderSettings()});$('rfx-min').addEventListener('change',e=>{state.fxRandomMin=Math.max(1,Number(e.target.value)||1);saveRandomFxRange();renderSettings()});$('rfx-max').addEventListener('change',e=>{state.fxRandomMax=Math.max(1,Number(e.target.value)||1);saveRandomFxRange();renderSettings()});$('btn-create-playlist').addEventListener('click',createPlaylist);$('playlist-name').addEventListener('keydown',e=>{if(e.key==='Enter')createPlaylist()});$('btn-open-upload').addEventListener('click',()=>$('upload-sheet').classList.add('show'));$('btn-close-upload').addEventListener('click',()=>$('upload-sheet').classList.remove('show'));document.querySelectorAll('[data-upload-type]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-upload-type]').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.uploadType=b.dataset.uploadType}));$('upload-zone').addEventListener('click',()=>$('file-input').click());$('file-input').addEventListener('change',e=>uploadFiles(e.target.files));['dragenter','dragover'].forEach(ev=>$('upload-zone').addEventListener(ev,e=>{e.preventDefault();$('upload-zone').classList.add('dragover')}));['dragleave','drop'].forEach(ev=>$('upload-zone').addEventListener(ev,e=>{e.preventDefault();$('upload-zone').classList.remove('dragover')}));$('upload-zone').addEventListener('drop',e=>uploadFiles(e.dataTransfer.files));window.addEventListener('resize',()=>drawWaveform(music.duration?getCurrentTime()/music.duration:0))}
+    loadLocalState();bindEvents();fetchFiles();
+  </script>
 </body>
 </html>
