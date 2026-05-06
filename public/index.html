@@ -1,253 +1,667 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>JuxBox</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>La Rouxe-Box</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --surface: rgba(255,255,255,.06);
+      --surface2: rgba(255,255,255,.08);
+      --surface3: rgba(255,255,255,.12);
+      --border: rgba(255,255,255,.10);
+      --text: #f5f5f7;
+      --muted: #a1a1aa;
+      --soft: #d4d4d8;
+      --accent: #0a84ff;
+      --accent2: #5ac8fa;
+      --green: #30d158;
+      --red: #ff453a;
+      --orange: #ff9f0a;
+      --radius: 22px;
+      --tab-h: 74px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0f1115;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    html { height: 100%; }
+    body { min-height: 100%; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    button, input { font: inherit; }
+    button { border: 0; cursor: pointer; color: inherit; }
+    .hidden { display: none !important; }
+
+    #app {
+      position: relative;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+      background:
+        radial-gradient(circle at top center, rgba(90,200,250,.10), transparent 30%),
+        linear-gradient(180deg, #16181d 0%, #0f1115 100%);
+    }
+
+    .topbar {
+      height: 64px;
+      padding: 12px 16px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; flex-direction: column; line-height: 1; }
+    .brand strong { font-size: 1rem; letter-spacing: -.2px; font-weight: 700; }
+    .brand span { color: var(--muted); font-size: .72rem; margin-top: 5px; }
+
+    .top-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      display: grid;
+      place-items: center;
+      color: var(--soft);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .icon-btn:active { transform: scale(.97); background: rgba(255,255,255,.09); }
+    .icon-btn svg { width: 20px; height: 20px; }
+
+    .status-banner {
+      margin: 0 16px 10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      color: #f5f5f7;
+      font-size: .78rem;
+      line-height: 1.35;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .status-banner.success { background: rgba(48,209,88,.12); border-color: rgba(48,209,88,.18); color: #d1fadf; }
+    .status-banner.error { background: rgba(255,69,58,.12); border-color: rgba(255,69,58,.18); color: #ffd6d3; }
+
+    .screen {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      padding: 8px 16px calc(var(--tab-h) + var(--safe-bottom) + 28px);
+      scrollbar-width: thin;
+    }
+    .screen::-webkit-scrollbar { width: 6px; }
+    .screen::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
+
+    .quick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .quick-card {
+      min-height: 74px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 12px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .quick-card:active { transform: scale(.985); background: rgba(255,255,255,.08); }
+    .quick-card .label { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+    .quick-card .value { font-size: .97rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .deck-card {
+      border-radius: 28px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 50px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+      padding: 18px;
+      overflow: hidden;
+      position: relative;
+      backdrop-filter: blur(26px);
+      -webkit-backdrop-filter: blur(26px);
+    }
+    .deck-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at top right, rgba(90,200,250,.10), transparent 30%);
+      pointer-events: none;
+    }
+
+    .track-area { display: flex; align-items: center; gap: 16px; position: relative; z-index: 1; }
+    .vinyl {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background:
+        radial-gradient(circle, #0a0c10 0 14%, #5ac8fa 15% 18%, #0a0c10 19% 31%, #1a1d24 32% 43%, #0a0c10 44% 100%),
+        conic-gradient(from 0deg, #1b1f27, #101318, #222832, #101318, #1b1f27);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 0 0 8px rgba(255,255,255,.02), 0 8px 24px rgba(0,0,0,.22);
+      animation: spin 3.2s linear infinite;
+      animation-play-state: paused;
+    }
+    .vinyl.playing { animation-play-state: running; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .track-meta { min-width: 0; flex: 1; }
+    .state-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(48,209,88,.12);
+      color: var(--green);
+      font-size: .72rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .state-dot { width: 7px; height: 7px; border-radius: 99px; background: currentColor; box-shadow: 0 0 8px currentColor; }
+    .track-title {
+      font-size: 1.04rem;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .track-sub { color: var(--muted); font-size: .82rem; margin-top: 7px; }
+
+    .wave-wrap { margin-top: 22px; position: relative; z-index: 1; }
+    .time-row { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+    .waveform {
+      height: 60px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
+      position: relative;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .wave-bars { position: absolute; inset: 8px; display: flex; align-items: center; gap: 3px; }
+    .wave-bars i { flex: 1; min-width: 2px; border-radius: 99px; background: rgba(255,255,255,.16); height: calc(20% + var(--h) * 1%); }
+    .wave-progress { position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, rgba(10,132,255,.22), rgba(90,200,250,.10)); pointer-events: none; }
+    .seek-line { position: absolute; left: 0%; top: 0; bottom: 0; width: 2px; background: var(--accent2); box-shadow: none; }
+
+    .transport { margin-top: 22px; display: grid; grid-template-columns: 48px 56px 76px 56px 48px; gap: 10px; align-items: center; justify-content: center; position: relative; z-index: 1; }
+    .transport button {
+      height: 52px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      display: grid;
+      place-items: center;
+      color: var(--soft);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .transport button:active { transform: scale(.97); background: rgba(255,255,255,.08); }
+    .transport .play { width: 76px; height: 76px; border-radius: 24px; background: linear-gradient(180deg, #3aa0ff, #0a84ff); color: #fff; box-shadow: 0 12px 28px rgba(10,132,255,.28); }
+    .transport svg { width: 22px; height: 22px; }
+    .transport .play svg { width: 32px; height: 32px; }
+
+    .sliders { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .slider-card {
+      border-radius: 18px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 12px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.14);
+    }
+    .slider-top { display: flex; justify-content: space-between; color: var(--muted); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 10px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .fx-live { margin-top: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .fx-pad {
+      min-height: 74px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: left;
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.14);
+    }
+    .fx-pad.active { background: rgba(10,132,255,.14); border-color: rgba(90,200,250,.24); box-shadow: 0 0 0 1px rgba(90,200,250,.06); }
+    .fx-pad:active { transform: scale(.97); }
+    .fx-pad strong { font-size: .82rem; line-height: 1.1; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fx-pad span { color: var(--muted); font-size: .68rem; }
+
+    .section-title { margin: 20px 2px 10px; display: flex; justify-content: space-between; align-items: end; }
+    .section-title h2 { font-size: .95rem; text-transform: none; letter-spacing: -.1px; font-weight: 700; }
+    .section-title button { background: none; color: var(--accent2); font-size: .82rem; font-weight: 600; }
+
+    .list-card {
+      border-radius: 20px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.16);
+    }
+    .track-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .track-item:last-child { border-bottom: 0; }
+    .track-number { width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.05); display: grid; place-items: center; color: var(--muted); font-size: .78rem; font-weight: 700; flex-shrink: 0; }
+    .track-item.active .track-number { background: rgba(10,132,255,.14); color: var(--accent2); }
+    .track-info-mini { min-width: 0; flex: 1; }
+    .track-info-mini strong { display: block; font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 650; }
+    .track-info-mini span { display: block; margin-top: 2px; color: var(--muted); font-size: .73rem; }
+    .track-actions { display: flex; gap: 6px; }
+    .mini-btn { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); display: grid; place-items: center; color: var(--soft); }
+    .mini-btn:disabled { opacity: .25; cursor: not-allowed; }
+    .mini-btn.danger { color: var(--red); }
+
+    .bottom-tabs {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: calc(var(--tab-h) + var(--safe-bottom));
+      padding: 8px 10px calc(8px + var(--safe-bottom));
+      background: rgba(22,24,29,.82);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-top: 1px solid rgba(255,255,255,.06);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      z-index: 30;
+    }
+    .tab-btn { border-radius: 16px; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: .64rem; font-weight: 600; }
+    .tab-btn svg { width: 21px; height: 21px; }
+    .tab-btn.active { background: rgba(255,255,255,.07); color: var(--accent2); }
+
+    .sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+    .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+    .sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      max-height: 86dvh;
+      background: rgba(24,26,32,.92);
+      border-radius: 28px 28px 0 0;
+      border: 1px solid rgba(255,255,255,.08);
+      z-index: 50;
+      transform: translateY(105%);
+      transition: transform .22s ease;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+    }
+    .sheet.show { transform: translateY(0); }
+    .sheet-handle { width: 46px; height: 5px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 10px auto 8px; flex-shrink: 0; }
+    .sheet-head { padding: 0 18px 14px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .sheet-head h2 { font-size: 1rem; font-weight: 700; }
+    .sheet-close { width: 38px; height: 38px; border-radius: 12px; background: rgba(255,255,255,.05); color: var(--soft); }
+    .sheet-body { overflow-y: auto; padding: 0 18px calc(20px + var(--safe-bottom)); -webkit-overflow-scrolling: touch; }
+
+    .search-input, .text-input { width: 100%; height: 48px; border-radius: 16px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.05); color: var(--text); padding: 0 14px; outline: none; margin-bottom: 12px; }
+    .text-input:focus, .search-input:focus { border-color: rgba(90,200,250,.32); }
+    .primary-btn { min-height: 50px; border-radius: 16px; background: linear-gradient(180deg, #3aa0ff, #0a84ff); color: #fff; font-weight: 700; padding: 0 16px; box-shadow: 0 12px 24px rgba(10,132,255,.24); }
+    .secondary-btn { min-height: 48px; border-radius: 16px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: var(--soft); font-weight: 600; padding: 0 16px; }
+
+    .segmented { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 18px; margin-bottom: 14px; }
+    .segmented button { min-height: 40px; border-radius: 14px; background: transparent; color: var(--muted); font-weight: 600; }
+    .segmented button.active { background: rgba(255,255,255,.09); color: var(--text); }
+
+    .option-card { border-radius: 20px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); padding: 14px; margin-bottom: 12px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+    .option-card h3 { font-size: .82rem; text-transform: none; letter-spacing: 0; color: var(--text); margin-bottom: 12px; font-weight: 700; }
+    .option-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .option-row:last-child { border-bottom: 0; }
+    .option-row label { color: var(--soft); font-size: .88rem; font-weight: 600; }
+    .option-row span { color: var(--muted); font-size: .78rem; }
+
+    .switch { width: 58px; height: 34px; border-radius: 99px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.08); position: relative; flex-shrink: 0; }
+    .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .18s ease; }
+    .switch.on { background: rgba(48,209,88,.34); border-color: rgba(48,209,88,.25); }
+    .switch.on::after { transform: translateX(24px); }
+
+    .upload-zone { min-height: 156px; border-radius: 24px; border: 1px dashed rgba(90,200,250,.32); background: rgba(255,255,255,.05); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; text-align: center; padding: 18px; margin-bottom: 14px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .upload-zone svg { width: 42px; height: 42px; color: var(--accent2); }
+    .upload-zone strong { font-size: .95rem; }
+    .upload-zone span { color: var(--muted); font-size: .82rem; }
+    .empty-state { text-align: center; color: var(--muted); padding: 26px 12px; font-size: .9rem; }
+
+    @media (min-width: 600px) {
+      #app { max-width: 480px; margin: 0 auto; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    }
+
+    @media (max-width: 430px) {
+      .topbar { height: 58px; padding: 10px 14px 6px; }
+      .brand strong { font-size: .98rem; }
+      .brand span { font-size: .66rem; }
+      .status-banner { margin: 0 14px 8px; font-size: .72rem; padding: 8px 10px; }
+      .screen { padding: 6px 14px calc(var(--tab-h) + var(--safe-bottom) + 34px); }
+      .quick-card { min-height: 68px; padding: 10px; }
+      .deck-card { padding: 14px; border-radius: 24px; }
+      .track-area { gap: 12px; }
+      .vinyl { width: 88px; height: 88px; }
+      .track-title { font-size: .98rem; }
+      .track-sub { font-size: .76rem; }
+      .wave-wrap { margin-top: 16px; }
+      .waveform { height: 58px; }
+      .transport { grid-template-columns: 44px 50px 70px 50px 44px; gap: 8px; margin-top: 18px; }
+      .transport button { height: 50px; border-radius: 16px; }
+      .transport .play { width: 70px; height: 70px; border-radius: 23px; }
+      .sliders { margin-top: 14px; gap: 8px; }
+      .slider-card { padding: 10px; }
+      .fx-live { grid-template-columns: repeat(2, 1fr); }
+      .bottom-tabs { height: calc(68px + var(--safe-bottom)); --tab-h: 68px; }
+    }
+  </style>
 </head>
 <body>
-
-  <!-- Preload screen (shown while audio files cache) -->
-  <div id="preload-screen" class="preload-screen">
-    <div class="preload-logo">JUX<span>BOX</span></div>
-    <div class="preload-status" id="preload-status">Préparation…</div>
-    <div class="preload-bar"><div class="preload-fill" id="preload-fill"></div></div>
-    <div class="preload-count" id="preload-count">—</div>
-    <button class="preload-skip hidden" id="preload-skip">Démarrer maintenant</button>
-  </div>
-
   <div id="app">
-
-    <!-- Header -->
-    <header>
-      <div class="logo">JUX<span>BOX</span></div>
-      <div class="header-controls">
-        <button class="btn-header" id="btn-settings-toggle" title="Réglages">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-          <span class="btn-label" id="playlist-current-label">Tous</span>
-        </button>
-        <button class="btn-upload-main" id="btn-upload-toggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span class="btn-label">Ajouter</span>
-        </button>
+    <header class="topbar">
+      <div class="brand"><strong>La Rouxe-Box</strong><span id="header-subtitle">Playlist : Tous</span></div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btn-upload" title="Ajouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+        <button class="icon-btn" id="btn-settings" title="Réglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
       </div>
     </header>
 
-    <!-- Settings Panel -->
-    <div id="settings-panel" class="panel hidden">
-      <div class="upload-panel-header">
-        <h3>Réglages</h3>
-        <button class="btn-close-panel" id="btn-close-settings">✕</button>
-      </div>
+    <div class="status-banner hidden" id="status-banner"></div>
 
-      <div class="settings-sections">
-
-        <section class="settings-block">
-          <h4>Lecture</h4>
-          <div class="mixer-row">
-            <div class="knob-group">
-              <label>Pitch</label>
-              <input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" class="slider slider-pitch">
-              <span class="slider-val" id="pitch-val">1.00x</span>
-            </div>
-            <div class="loop-control">
-              <label>Loop</label>
-              <button class="btn-loop" id="btn-loop">OFF</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-block">
-          <h4>Ducking FX</h4>
-          <div class="knob-group">
-            <label>Volume musique pendant FX</label>
-            <input type="range" id="duck-level" min="0" max="1" step="0.01" value="0.7" class="slider">
-            <span class="slider-val" id="duck-level-val">70%</span>
-          </div>
-        </section>
-
-        <section class="settings-block">
-          <h4>Random FX</h4>
-          <div class="random-fx-control">
-            <div class="random-fx-row">
-              <label>Auto-FX</label>
-              <button class="btn-loop" id="btn-random-fx">OFF</button>
-            </div>
-            <div class="random-fx-range">
-              <span class="rfx-cap">Délai</span>
-              <input type="number" id="rfx-min" min="1" max="600" value="10" inputmode="numeric"><span class="rfx-unit">s</span>
-              <span class="rfx-sep">–</span>
-              <input type="number" id="rfx-max" min="1" max="600" value="45" inputmode="numeric"><span class="rfx-unit">s</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-block">
-          <h4>Playlists</h4>
-          <div class="upload-tabs">
-            <button class="upload-tab active" data-pltab="select">Choisir</button>
-            <button class="upload-tab" data-pltab="manage">Gérer</button>
-          </div>
-          <div id="pl-select" class="pl-tab-content"></div>
-          <div id="pl-manage" class="pl-tab-content hidden">
-            <form id="pl-create-form" class="pl-create">
-              <input type="text" id="pl-create-input" placeholder="Nom de la nouvelle playlist" autocomplete="off">
-              <button type="submit">Créer</button>
-            </form>
-            <div id="pl-manage-list"></div>
-          </div>
-        </section>
-
-      </div>
-    </div>
-
-    <!-- Upload Panel -->
-    <div id="upload-panel" class="panel hidden">
-      <div class="upload-panel-header">
-        <h3>Ajouter des fichiers</h3>
-        <button class="btn-close-panel" id="btn-close-upload">✕</button>
-      </div>
-      <div class="upload-tabs">
-        <button class="upload-tab active" data-tab="music">Musiques</button>
-        <button class="upload-tab" data-tab="fx">Effets (FX)</button>
-      </div>
-      <div class="upload-drop-zone" id="drop-zone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
-        <p>Appuie ou glisse tes MP3 ici</p>
-        <input type="file" id="file-input" accept=".mp3,audio/mpeg" multiple hidden>
-      </div>
-      <div id="upload-progress" class="hidden">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-        <span id="progress-label">Envoi...</span>
-      </div>
-    </div>
-
-    <!-- Main layout -->
-    <main>
-
-      <!-- Left: Playlist -->
-      <aside class="playlist-panel" id="panel-playlist">
-        <div class="panel-header">
-          <span>Playlist</span>
-          <span class="track-count" id="track-count">0 titres</span>
-        </div>
-        <ul id="playlist"></ul>
-      </aside>
-
-      <!-- Center: Deck -->
-      <section class="deck" id="panel-deck">
-
-        <!-- FX Strip Top -->
-        <div class="fx-strip fx-strip-top" id="fx-strip-top"></div>
-
-        <!-- Now playing -->
-        <div class="now-playing">
-          <div class="vinyl" id="vinyl">
-            <div class="vinyl-inner"></div>
-          </div>
-          <div class="track-info">
-            <div class="track-name" id="track-name">Aucune piste</div>
-            <div class="track-index" id="track-index">—</div>
-          </div>
-        </div>
-
-        <!-- Waveform / Progress -->
-        <div class="waveform-container">
-          <span class="time" id="time-current">0:00</span>
-          <div class="waveform" id="waveform">
-            <canvas id="waveform-canvas"></canvas>
-            <div class="progress-overlay" id="waveform-progress"></div>
-            <div class="seek-handle" id="seek-handle"></div>
-          </div>
-          <span class="time" id="time-total">0:00</span>
-        </div>
-
-        <!-- Transport controls -->
-        <div class="transport">
-          <button class="btn-transport" id="btn-prev" title="Titre précédent">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-          </button>
-          <button class="btn-transport" id="btn-rewind" title="Retour au début">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm10 0L8 12l8 6V6z"/></svg>
-          </button>
-          <button class="btn-transport btn-play" id="btn-play" title="Play/Pause">
-            <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          </button>
-          <button class="btn-transport" id="btn-forward" title="Avancer de 10s">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2z"/><text x="11" y="16" font-size="6" text-anchor="middle" fill="currentColor">10</text></svg>
-          </button>
-          <button class="btn-transport" id="btn-next" title="Titre suivant">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-          </button>
-        </div>
-
-        <!-- Volume mixer (compact) -->
-        <div class="deck-volumes">
-          <div class="knob-group">
-            <label>Musique</label>
-            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" class="slider">
-            <span class="slider-val" id="volume-val">80%</span>
-          </div>
-          <div class="knob-group">
-            <label>FX</label>
-            <input type="range" id="fx-volume" min="0" max="1" step="0.01" value="1" class="slider">
-            <span class="slider-val" id="fx-volume-val">100%</span>
-          </div>
-        </div>
-
-        <!-- FX Strip Bottom -->
-        <div class="fx-strip fx-strip-bottom" id="fx-strip-bottom"></div>
-
+    <main class="screen" id="screen">
+      <section class="quick-row">
+        <button class="quick-card" id="quick-playlist"><span class="label">Playlist</span><span class="value" id="quick-playlist-label">Tous</span></button>
+        <button class="quick-card" id="quick-fx"><span class="label">FX actifs</span><span class="value" id="quick-fx-label">0 son</span></button>
       </section>
 
-      <!-- Right: FX Pad -->
-      <aside class="fx-panel" id="panel-fx">
-        <div class="panel-header">
-          <span>FX</span>
+      <section class="deck-card">
+        <div class="track-area">
+          <div class="vinyl" id="vinyl"></div>
+          <div class="track-meta"><div class="state-pill" id="state-pill"><span class="state-dot"></span><span id="state-label">Prêt</span></div><div class="track-title" id="track-name">Aucune piste sélectionnée</div><div class="track-sub" id="track-index">Ajoute ou choisis une musique</div></div>
         </div>
-        <div class="fx-section-label">Sons FX <span id="fx-count">(0)</span></div>
-        <div id="fx-list" class="fx-sound-list"></div>
-      </aside>
+        <div class="wave-wrap"><div class="time-row"><span id="time-current">0:00</span><span id="time-total">0:00</span></div><div class="waveform" id="waveform"><div class="wave-progress" id="wave-progress"></div><div class="seek-line" id="seek-line"></div><div class="wave-bars" id="wave-bars"></div></div></div>
+        <div class="transport">
+          <button id="btn-prev" title="Précédent"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+          <button id="btn-rewind" title="Début"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm10 0-8 6 8 6z"/></svg></button>
+          <button class="play" id="btn-play" title="Play/Pause"><svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg></button>
+          <button id="btn-forward" title="+10 sec"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 13a6 6 0 1 1-6-6v4l5-5-5-5v4a8 8 0 1 0 8 8z"/></svg></button>
+          <button id="btn-next" title="Suivant"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6zm10-12v12h2V6z"/></svg></button>
+        </div>
+        <div class="sliders"><div class="slider-card"><div class="slider-top"><span>Musique</span><strong id="volume-val">80%</strong></div><input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" /></div><div class="slider-card"><div class="slider-top"><span>FX</span><strong id="fx-volume-val">100%</strong></div><input type="range" id="fx-volume" min="0" max="1" step="0.01" value="1" /></div></div>
+      </section>
 
+      <div class="section-title"><h2>FX rapides</h2><button id="open-fx-manager">Gérer</button></div>
+      <section class="fx-live" id="fx-live"></section>
+      <div class="section-title"><h2>À suivre</h2><button id="open-playlist-manager">Voir tout</button></div>
+      <section class="list-card" id="mini-playlist"></section>
     </main>
 
-    <!-- Mobile bottom nav -->
-    <nav class="mobile-nav" id="mobile-nav">
-      <button class="nav-tab active" data-panel="deck">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
-        <span>Deck</span>
-      </button>
-      <button class="nav-tab" data-panel="playlist">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-        <span>Playlist</span>
-      </button>
-      <button class="nav-tab" data-panel="fx">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18h2V6H7v12zm4 4h2V2h-2v20zm-8-8h2v-4H3v4zm12 4h2V6h-2v12zm4-8v4h2v-4h-2z"/></svg>
-        <span>FX</span>
-      </button>
+    <nav class="bottom-tabs">
+      <button class="tab-btn active" data-sheet="deck"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3z"/></svg><span>Deck</span></button>
+      <button class="tab-btn" data-sheet="playlists"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3zm0 4h2v-2H3zm0-8h2V7H3zm4 4h14v-2H7zm0 4h14v-2H7zM7 7v2h14V7z"/></svg><span>Listes</span></button>
+      <button class="tab-btn" data-sheet="fx"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18h2V6H7zm4 4h2V2h-2zM3 14h2v-4H3zm12 4h2V6h-2zm4-8v4h2v-4z"/></svg><span>FX</span></button>
+      <button class="tab-btn" data-sheet="upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Ajouter</span></button>
+      <button class="tab-btn" data-sheet="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Réglages</span></button>
     </nav>
 
-    <!-- Confirm delete modal -->
-    <div id="confirm-modal" class="modal hidden">
-      <div class="modal-card">
-        <h3>Supprimer ce fichier ?</h3>
-        <p class="modal-target" id="confirm-name"></p>
-        <p class="modal-instruction">Tape <strong>oui</strong> pour confirmer.</p>
-        <input type="text" id="confirm-input" placeholder="oui" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <div class="modal-actions">
-          <button class="btn-cancel" id="confirm-cancel">Annuler</button>
-          <button class="btn-danger" id="confirm-ok" disabled>Supprimer</button>
-        </div>
-      </div>
-    </div>
+    <div class="sheet-backdrop" id="sheet-backdrop"></div>
 
+    <section class="sheet" id="sheet-playlists" data-sheet-panel="playlists"><div class="sheet-handle"></div><div class="sheet-head"><h2>Playlists</h2><button class="sheet-close">✕</button></div><div class="sheet-body"><input class="search-input" id="playlist-search" placeholder="Rechercher une musique..." /><div class="segmented"><button class="active" data-playlist-tab="select">Choisir</button><button data-playlist-tab="manage">Gérer</button></div><div id="playlist-select-panel"></div><div id="playlist-manage-panel" class="hidden"><input class="text-input" id="new-playlist-name" placeholder="Nom de la playlist" /><button class="primary-btn" id="create-playlist" style="width:100%; margin-bottom:14px;">Créer une playlist</button><div id="playlist-manage-list"></div></div></div></section>
+
+    <section class="sheet" id="sheet-fx" data-sheet-panel="fx"><div class="sheet-handle"></div><div class="sheet-head"><h2>Effets FX</h2><button class="sheet-close">✕</button></div><div class="sheet-body"><input class="search-input" id="fx-search" placeholder="Rechercher un FX..." /><div class="option-card"><h3>Random FX</h3><div class="option-row"><div><label>Auto-FX</label><br><span>Lance un FX au hasard</span></div><button class="switch" id="random-fx-switch"></button></div><div class="option-row"><label>Délai min</label><input type="number" id="rfx-min" min="1" max="600" value="10" style="width:76px" class="text-input" /></div><div class="option-row"><label>Délai max</label><input type="number" id="rfx-max" min="1" max="600" value="45" style="width:76px" class="text-input" /></div></div><div class="list-card" id="fx-list-full"></div></div></section>
+
+    <section class="sheet" id="sheet-upload" data-sheet-panel="upload"><div class="sheet-handle"></div><div class="sheet-head"><h2>Ajouter des fichiers</h2><button class="sheet-close">✕</button></div><div class="sheet-body"><div class="segmented"><button class="active" data-upload-tab="music">Musiques</button><button data-upload-tab="fx">FX</button></div><label class="upload-zone" for="file-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg><strong>Appuie ici pour ajouter tes MP3</strong><span id="upload-type-label">Ajout dans : Musiques</span><input type="file" id="file-input" accept=".mp3,audio/mpeg" multiple hidden /></label><div class="option-card hidden" id="upload-progress-card"><h3>Upload</h3><div class="option-row"><label id="upload-progress-label">Envoi...</label><span id="upload-progress-value">0%</span></div><input type="range" min="0" max="100" value="0" id="upload-progress-range" disabled /></div></div></section>
+
+    <section class="sheet" id="sheet-settings" data-sheet-panel="settings"><div class="sheet-handle"></div><div class="sheet-head"><h2>Réglages</h2><button class="sheet-close">✕</button></div><div class="sheet-body"><div class="option-card"><h3>Lecture</h3><div class="option-row"><div><label>Loop</label><br><span>Répéter le titre actuel</span></div><button class="switch" id="loop-switch"></button></div><div style="margin-top:14px"><div class="slider-top"><span>Pitch</span><strong id="pitch-val">1.00x</strong></div><input type="range" id="pitch" min="0.5" max="2" step="0.01" value="1" /></div></div><div class="option-card"><h3>Ducking FX</h3><div class="slider-top"><span>Volume musique pendant FX</span><strong id="duck-level-val">70%</strong></div><input type="range" id="duck-level" min="0" max="1" step="0.01" value="0.7" /></div><div class="option-card"><h3>Maintenance</h3><button class="secondary-btn" id="clear-cache" style="width:100%;">Vider le cache audio</button></div></div></section>
+
+    <section class="sheet" id="sheet-confirm" data-sheet-panel="confirm"><div class="sheet-handle"></div><div class="sheet-head"><h2>Confirmer</h2><button class="sheet-close">✕</button></div><div class="sheet-body"><div class="option-card"><h3>Suppression</h3><p style="color:var(--soft); margin-bottom:12px; word-break:break-word;" id="confirm-name">Fichier</p><p style="color:var(--muted); font-size:.86rem; margin-bottom:12px;">Tape <strong style="color:var(--red);">oui</strong> pour confirmer.</p><input class="text-input" id="confirm-input" placeholder="oui" autocapitalize="off" autocomplete="off" spellcheck="false" /><button class="primary-btn" id="confirm-ok" disabled style="width:100%; background:var(--red); box-shadow:none;">Supprimer</button></div></div></section>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    const state = {
+      allMusic: [], allFx: [], playlist: [], fxSounds: [], playlists: [], activePlaylistId: null,
+      currentIndex: -1, isPlaying: false, isLooping: false, fxVolume: 1, userMusicVolume: 0.8,
+      duckLevel: 0.7, pitch: 1, uploadTab: 'music', autoFxEnabled: false, fxRandomMin: 10, fxRandomMax: 45,
+      backendAvailable: true, demoMode: false,
+    };
+
+    const PLAYLISTS_KEY = 'juxbox-playlists';
+    const ACTIVE_KEY = 'juxbox-active-playlist';
+    const DUCK_KEY = 'juxbox-duck-level';
+    const RANDOM_FX_KEY = 'juxbox-random-fx-range';
+    const MUSIC_ORDER_KEY = 'juxbox-music-order';
+    const DEMO_MUSIC = [
+      { name: 'Mode demo - ajoute tes MP3.mp3', url: '' },
+      { name: 'Le backend Express ne répond pas.mp3', url: '' },
+    ];
+    const DEMO_FX = [
+      { name: 'Airhorn demo.mp3', url: '' }, { name: 'Clap demo.mp3', url: '' }, { name: 'Siren demo.mp3', url: '' },
+      { name: 'Laser demo.mp3', url: '' }, { name: 'Drop demo.mp3', url: '' }, { name: 'Wow demo.mp3', url: '' },
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = state.userMusicVolume;
+    masterGain.connect(ctx.destination);
+
+    const musicAudioEl = new Audio();
+    musicAudioEl.preload = 'auto';
+    musicAudioEl.playsInline = true;
+    musicAudioEl.setAttribute('playsinline', '');
+    musicAudioEl.setAttribute('webkit-playsinline', '');
+    if ('preservesPitch' in musicAudioEl) musicAudioEl.preservesPitch = false;
+    if ('mozPreservesPitch' in musicAudioEl) musicAudioEl.mozPreservesPitch = false;
+    if ('webkitPreservesPitch' in musicAudioEl) musicAudioEl.webkitPreservesPitch = false;
+
+    let sourceNode = null;
+    try { sourceNode = ctx.createMediaElementSource(musicAudioEl); sourceNode.connect(masterGain); }
+    catch (err) { console.warn('Audio source already connected or unavailable:', err); }
+
+    const bufferCache = new Map();
+    const music = { url: null, duration: 0 };
+    let fxSource = null, fxGainNode = null, playingFxIndex = -1, isDucked = false, autoFxTimer = null, confirmCallback = null;
+
+    function fmt(s) { if (!Number.isFinite(s) || s < 0) return '0:00'; const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${String(sec).padStart(2, '0')}`; }
+    function stripExt(name) { return String(name || '').replace(/\.mp3$/i, ''); }
+    function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+    function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+    function unlockAudio() { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); }
+    ['touchstart','click','keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { passive: true }));
+
+    function showStatus(message, type = 'warning') { const el = $('status-banner'); el.textContent = message; el.className = `status-banner ${type}`; }
+    function hideStatus() { const el = $('status-banner'); el.textContent = ''; el.className = 'status-banner hidden'; }
+
+    function apiBaseCandidates() {
+      const bases = ['', '.'];
+      const configured = document.querySelector('meta[name="juxbox-api-base"]')?.content || window.JUXBOX_API_BASE || '';
+      if (configured) bases.unshift(String(configured).replace(/\/$/, ''));
+      return Array.from(new Set(bases));
+    }
+    function apiUrl(path, base = '') { const clean = String(path).replace(/^\/+/, ''); return base ? `${base}/${clean}` : `/${clean}`; }
+
+    async function fetchJsonSafe(path) {
+      let lastError = null;
+      for (const base of apiBaseCandidates()) {
+        const url = apiUrl(path, base);
+        try {
+          const r = await fetch(url, { cache: 'no-store' });
+          if (!r.ok) { lastError = new Error(`HTTP ${r.status} on ${url}`); continue; }
+          return { ok: true, data: await r.json(), url };
+        } catch (err) { lastError = err; }
+      }
+      return { ok: false, error: lastError || new Error('API unavailable') };
+    }
+
+    async function fetchWriteSafe(path, options) {
+      let lastError = null;
+      for (const base of apiBaseCandidates()) {
+        const url = apiUrl(path, base);
+        try {
+          const r = await fetch(url, options);
+          if (r.ok) return { ok: true, url, response: r };
+          lastError = new Error(`HTTP ${r.status} on ${url}`);
+        } catch (err) { lastError = err; }
+      }
+      return { ok: false, error: lastError || new Error('API unavailable') };
+    }
+
+    function loadLocalState() {
+      try { state.playlists = JSON.parse(localStorage.getItem(PLAYLISTS_KEY) || '[]'); } catch { state.playlists = []; }
+      state.activePlaylistId = localStorage.getItem(ACTIVE_KEY) || null;
+      const duck = parseFloat(localStorage.getItem(DUCK_KEY));
+      if (Number.isFinite(duck)) state.duckLevel = Math.max(0, Math.min(1, duck));
+      try { const rfx = JSON.parse(localStorage.getItem(RANDOM_FX_KEY) || '{}'); if (Number.isFinite(rfx.min)) state.fxRandomMin = rfx.min; if (Number.isFinite(rfx.max)) state.fxRandomMax = rfx.max; } catch {}
+    }
+    function savePlaylists() { localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(state.playlists)); }
+    function saveActivePlaylist() { state.activePlaylistId ? localStorage.setItem(ACTIVE_KEY, state.activePlaylistId) : localStorage.removeItem(ACTIVE_KEY); }
+    function saveDuck() { localStorage.setItem(DUCK_KEY, String(state.duckLevel)); }
+    function saveMusicOrder() { localStorage.setItem(MUSIC_ORDER_KEY, JSON.stringify(state.playlist.map(t => t.name))); }
+    function saveRandomFx() { localStorage.setItem(RANDOM_FX_KEY, JSON.stringify({ min: state.fxRandomMin, max: state.fxRandomMax })); }
+    function getActivePlaylist() { return state.playlists.find(p => p.id === state.activePlaylistId) || null; }
+    function newPlaylistId() { return 'pl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    function applyPlaylistFilter() {
+      const pl = getActivePlaylist();
+      const musicByName = new Map(state.allMusic.map(t => [t.name, t]));
+      if (!pl) {
+        let savedOrder = [];
+        try { savedOrder = JSON.parse(localStorage.getItem(MUSIC_ORDER_KEY) || '[]'); } catch {}
+        const ordered = savedOrder.map(n => musicByName.get(n)).filter(Boolean);
+        const known = new Set(ordered.map(t => t.name));
+        const newOnes = state.allMusic.filter(t => !known.has(t.name));
+        state.playlist = [...ordered, ...newOnes];
+        state.fxSounds = state.allFx.map(f => ({ ...f, position: f.position || 'bottom', volume: f.volume ?? 1 }));
+      } else {
+        state.playlist = pl.musicNames.map(n => musicByName.get(n)).filter(Boolean);
+        const fxByName = new Map(state.allFx.map(f => [f.name, f]));
+        state.fxSounds = pl.fxNames.map(n => fxByName.get(n)).filter(Boolean).map(f => ({ ...f, position: f.position || 'bottom', volume: f.volume ?? 1 }));
+      }
+      if (state.currentIndex >= state.playlist.length) state.currentIndex = state.playlist.length - 1;
+    }
+    function moveTrack(index, direction) {
+      const target = index + direction;
+      if (target < 0 || target >= state.playlist.length) return;
+      const playingName = state.currentIndex >= 0 ? state.playlist[state.currentIndex]?.name : null;
+      [state.playlist[index], state.playlist[target]] = [state.playlist[target], state.playlist[index]];
+      state.currentIndex = playingName ? state.playlist.findIndex(t => t.name === playingName) : -1;
+      const pl = getActivePlaylist();
+      if (pl) { pl.musicNames = state.playlist.map(t => t.name); savePlaylists(); }
+      else { saveMusicOrder(); }
+      renderAll();
+    }
+
+    async function refreshFiles() {
+      const [musicRes, fxRes] = await Promise.all([fetchJsonSafe('api/files/music'), fetchJsonSafe('api/files/fx')]);
+      if (!musicRes.ok || !fxRes.ok) {
+        state.backendAvailable = false; state.demoMode = true; state.allMusic = DEMO_MUSIC; state.allFx = DEMO_FX;
+        applyPlaylistFilter(); renderAll(); showStatus(`API introuvable (${musicRes.error?.message || fxRes.error?.message}). Mode démo activé. Lance server.js sur le même domaine/port pour charger tes vrais MP3.`, 'warning');
+        return;
+      }
+      state.backendAvailable = true; state.demoMode = false; state.allMusic = Array.isArray(musicRes.data) ? musicRes.data : []; state.allFx = Array.isArray(fxRes.data) ? fxRes.data : [];
+      applyPlaylistFilter(); renderAll(); hideStatus();
+    }
+
+    function renderAll() { renderHeader(); renderDeck(); renderWavePlaceholder(); renderQuickFx(); renderMiniPlaylist(); renderPlaylistSheets(); renderFxSheet(); renderSettings(); }
+    function renderHeader() { const pl = getActivePlaylist(); const name = pl ? pl.name : 'Tous'; $('header-subtitle').textContent = `Playlist : ${name}`; $('quick-playlist-label').textContent = name; $('quick-fx-label').textContent = `${state.fxSounds.length} son${state.fxSounds.length > 1 ? 's' : ''}`; }
+    function renderDeck() { const track = state.currentIndex >= 0 ? state.playlist[state.currentIndex] : null; $('track-name').textContent = track ? stripExt(track.name) : 'Aucune piste sélectionnée'; $('track-index').textContent = track ? `${state.currentIndex + 1} / ${state.playlist.length}` : 'Ajoute ou choisis une musique'; $('state-label').textContent = state.isPlaying ? 'Lecture' : 'Prêt'; $('vinyl').classList.toggle('playing', state.isPlaying); $('play-icon').classList.toggle('hidden', state.isPlaying); $('pause-icon').classList.toggle('hidden', !state.isPlaying); $('volume-val').textContent = Math.round(state.userMusicVolume * 100) + '%'; $('fx-volume-val').textContent = Math.round(state.fxVolume * 100) + '%'; }
+    function renderWavePlaceholder() { const container = $('wave-bars'); if (container.children.length) return; container.innerHTML = Array.from({ length: 42 }, (_, i) => `<i style="--h:${18 + Math.round(Math.abs(Math.sin(i * .62)) * 58)}"></i>`).join(''); }
+    function renderQuickFx() { const root = $('fx-live'); const quick = state.fxSounds.slice(0, 6); if (!quick.length) { root.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">Aucun FX disponible</div>`; return; } root.innerHTML = quick.map((fx, i) => `<button class="fx-pad ${playingFxIndex === i ? 'active' : ''}" data-fx-index="${i}"><strong>${escapeHtml(stripExt(fx.name))}</strong><span>${playingFxIndex === i ? 'Lecture' : 'Tap FX'}</span></button>`).join(''); root.querySelectorAll('[data-fx-index]').forEach(btn => btn.addEventListener('click', () => playFxSound(Number(btn.dataset.fxIndex)))); }
+    function trackRow(track, index, active = false, compact = false) { const isFirst = index === 0; const isLast = index === state.playlist.length - 1; return `<div class="track-item ${active ? 'active' : ''}" data-track-index="${index}"><div class="track-number">${index + 1}</div><div class="track-info-mini"><strong>${escapeHtml(stripExt(track.name))}</strong><span>${compact ? 'Musique' : escapeHtml(track.name)}</span></div><div class="track-actions"><button class="mini-btn" data-action="up" title="Monter" ${isFirst ? 'disabled' : ''}>▲</button><button class="mini-btn" data-action="down" title="Descendre" ${isLast ? 'disabled' : ''}>▼</button><button class="mini-btn danger" data-action="delete" title="Supprimer">✕</button></div></div>`; }
+    function bindTrackRows(root) { root.querySelectorAll('.track-item').forEach(row => row.addEventListener('click', (e) => { const index = Number(row.dataset.trackIndex); const action = e.target.closest('button')?.dataset.action; if (action === 'up') return moveTrack(index, -1); if (action === 'down') return moveTrack(index, 1); if (action === 'delete') return askDeleteConfirm(state.playlist[index]?.name, () => deleteFile('music', state.playlist[index]?.name)); loadTrack(index, true); })); }
+    function renderMiniPlaylist() { const root = $('mini-playlist'); const items = state.playlist.slice(0, 8); if (!items.length) { root.innerHTML = `<div class="empty-state">Aucune musique. Ajoute des MP3.</div>`; return; } root.innerHTML = items.map((track, i) => trackRow(track, i, i === state.currentIndex, true)).join(''); bindTrackRows(root); }
+    function checkboxRow(kind, name, checked) { return `<label class="option-row" style="min-height:38px;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(stripExt(name))}</span><input type="checkbox" data-kind="${kind}" data-name="${escapeAttr(name)}" ${checked ? 'checked' : ''} /></label>`; }
+    function renderPlaylistSheets() { const select = $('playlist-select-panel'); const active = getActivePlaylist(); const allBtn = `<button class="quick-card" style="width:100%; margin-bottom:10px;" data-select-playlist=""><span class="label">Toutes les musiques</span><span class="value">${state.allMusic.length} musiques · ${state.allFx.length} FX</span></button>`; const playlistBtns = state.playlists.map(pl => `<button class="quick-card" style="width:100%; margin-bottom:10px; ${active?.id === pl.id ? 'border-color:rgba(90,200,250,.32); background:rgba(255,255,255,.08);' : ''}" data-select-playlist="${escapeAttr(pl.id)}"><span class="label">Playlist</span><span class="value">${escapeHtml(pl.name)} · ${pl.musicNames.length} musiques · ${pl.fxNames.length} FX</span></button>`).join(''); select.innerHTML = allBtn + playlistBtns + `<div class="list-card">${state.playlist.map((t, i) => trackRow(t, i, i === state.currentIndex)).join('') || '<div class="empty-state">Aucun titre dans cette sélection.</div>'}</div>`; select.querySelectorAll('[data-select-playlist]').forEach(btn => btn.addEventListener('click', () => setActivePlaylist(btn.dataset.selectPlaylist || null))); bindTrackRows(select); const manage = $('playlist-manage-list'); if (!state.playlists.length) { manage.innerHTML = `<div class="empty-state">Crée une playlist pour choisir les musiques et les FX à afficher.</div>`; return; } manage.innerHTML = state.playlists.map(pl => `<div class="option-card" data-manage-playlist="${escapeAttr(pl.id)}"><h3>${escapeHtml(pl.name)}</h3><div class="option-row"><label>Nom</label><input class="text-input playlist-rename" value="${escapeAttr(pl.name)}" style="width:58%; margin:0;" /></div><div class="option-row"><label>Musiques</label><span>${pl.musicNames.length}/${state.allMusic.length}</span></div>${state.allMusic.map(t => checkboxRow('music', t.name, pl.musicNames.includes(t.name))).join('')}<div class="option-row"><label>FX</label><span>${pl.fxNames.length}/${state.allFx.length}</span></div>${state.allFx.map(f => checkboxRow('fx', f.name, pl.fxNames.includes(f.name))).join('')}<button class="secondary-btn delete-playlist" style="width:100%; margin-top:12px; color:var(--red);">Supprimer la playlist</button></div>`).join(''); manage.querySelectorAll('[data-manage-playlist]').forEach(card => { const id = card.dataset.managePlaylist; card.querySelector('.playlist-rename').addEventListener('change', (e) => renamePlaylist(id, e.target.value)); card.querySelector('.delete-playlist').addEventListener('click', () => askDeleteConfirm('Playlist', () => deletePlaylist(id))); card.querySelectorAll('[data-kind]').forEach(cb => cb.addEventListener('change', () => togglePlaylistItem(id, cb.dataset.kind, cb.dataset.name))); }); }
+    function renderFxSheet() { const root = $('fx-list-full'); if (!state.fxSounds.length) { root.innerHTML = `<div class="empty-state">Aucun FX disponible.</div>`; return; } root.innerHTML = state.fxSounds.map((fx, i) => `<div class="track-item ${playingFxIndex === i ? 'active' : ''}" data-fx-row="${i}"><div class="track-number">FX</div><div class="track-info-mini"><strong>${escapeHtml(stripExt(fx.name))}</strong><span>${state.demoMode ? 'Simulation' : 'Tap pour jouer'}</span></div><div class="track-actions"><button class="mini-btn" data-fx-action="play">▶</button><button class="mini-btn danger" data-fx-action="delete">✕</button></div></div>`).join(''); root.querySelectorAll('[data-fx-row]').forEach(row => row.addEventListener('click', (e) => { const idx = Number(row.dataset.fxRow); const action = e.target.closest('button')?.dataset.fxAction; if (action === 'delete') return askDeleteConfirm(state.fxSounds[idx]?.name, () => deleteFile('fx', state.fxSounds[idx]?.name)); playFxSound(idx); })); $('random-fx-switch').classList.toggle('on', state.autoFxEnabled); }
+    function renderSettings() { $('loop-switch').classList.toggle('on', state.isLooping); $('pitch').value = state.pitch; $('pitch-val').textContent = state.pitch.toFixed(2) + 'x'; $('duck-level').value = state.duckLevel; $('duck-level-val').textContent = Math.round(state.duckLevel * 100) + '%'; $('rfx-min').value = state.fxRandomMin; $('rfx-max').value = state.fxRandomMax; }
+
+    async function loadBuffer(url) { if (!url) throw new Error('Aucun fichier audio réel disponible'); if (bufferCache.has(url)) return bufferCache.get(url); const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status}`); const arr = await r.arrayBuffer(); const buf = await new Promise((resolve, reject) => { try { const p = ctx.decodeAudioData(arr, resolve, reject); if (p && typeof p.then === 'function') p.then(resolve, reject); } catch (e) { reject(e); } }); bufferCache.set(url, buf); return buf; }
+    function loadTrack(index, autoPlay = true) { if (index < 0 || index >= state.playlist.length) return; state.currentIndex = index; const track = state.playlist[index]; music.url = track.url || ''; music.duration = 0; musicAudioEl.pause(); if (music.url) musicAudioEl.src = music.url; else musicAudioEl.removeAttribute('src'); musicAudioEl.playbackRate = state.pitch; renderAll(); if (autoPlay) playMusic(); }
+    function playMusic() { unlockAudio(); if (!music.url) { if (state.playlist.length && state.currentIndex === -1) return loadTrack(0, true); if (state.demoMode) showStatus('Mode démo : aucun vrai MP3 à lire. Lance le backend ou ajoute des fichiers via server.js.', 'warning'); return; } musicAudioEl.play().catch(err => showStatus(`Lecture impossible : ${err.message}`, 'error')); }
+    function pauseMusic() { musicAudioEl.pause(); }
+    function togglePlay() { state.isPlaying ? pauseMusic() : playMusic(); }
+    function seekMusic(t) { if (!Number.isFinite(musicAudioEl.duration)) return; musicAudioEl.currentTime = Math.max(0, Math.min(t, musicAudioEl.duration)); updateProgress(); }
+    function applyMusicGain() { const target = state.userMusicVolume * (isDucked ? state.duckLevel : 1); const now = ctx.currentTime; try { masterGain.gain.cancelScheduledValues(now); masterGain.gain.setValueAtTime(masterGain.gain.value, now); masterGain.gain.linearRampToValueAtTime(target, now + 0.14); } catch { masterGain.gain.value = target; } }
+    function duckMusic() { isDucked = true; applyMusicGain(); }
+    function unduckMusic() { isDucked = false; applyMusicGain(); }
+    function stopFx() { if (fxSource) { try { fxSource.onended = null; fxSource.stop(); } catch {} } fxSource = null; fxGainNode = null; playingFxIndex = -1; unduckMusic(); renderQuickFx(); renderFxSheet(); }
+    async function playFxSound(index) { unlockAudio(); if (playingFxIndex === index) return stopFx(); if (fxSource) { try { fxSource.onended = null; fxSource.stop(); } catch {} } playingFxIndex = index; renderQuickFx(); renderFxSheet(); const fx = state.fxSounds[index]; if (!fx?.url) { showStatus('Mode démo : FX simulé, pas de fichier audio réel.', 'warning'); setTimeout(() => { if (playingFxIndex === index) stopFx(); }, 900); return; } try { const buf = await loadBuffer(fx.url); if (playingFxIndex !== index) return; const src = ctx.createBufferSource(); const gain = ctx.createGain(); gain.gain.value = state.fxVolume * (fx.volume ?? 1); src.buffer = buf; src.connect(gain).connect(ctx.destination); src.onended = () => { if (fxSource === src) stopFx(); }; src.start(0); fxSource = src; fxGainNode = gain; duckMusic(); } catch (e) { stopFx(); showStatus(`FX impossible : ${e.message}`, 'error'); } }
+    function scheduleNextRandomFx() { if (!state.autoFxEnabled) return; const min = Math.max(1, Number(state.fxRandomMin) || 1); const max = Math.max(min, Number(state.fxRandomMax) || min); const delay = (min + Math.random() * (max - min)) * 1000; autoFxTimer = setTimeout(() => { if (state.fxSounds.length) playFxSound(Math.floor(Math.random() * state.fxSounds.length)); scheduleNextRandomFx(); }, delay); }
+    function toggleRandomFx() { state.autoFxEnabled = !state.autoFxEnabled; if (autoFxTimer) clearTimeout(autoFxTimer); if (state.autoFxEnabled) scheduleNextRandomFx(); renderFxSheet(); }
+    async function uploadFiles(files) { const list = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.mp3')); if (!list.length) return; if (!state.backendAvailable) { showStatus('Upload impossible : API backend introuvable. Lance server.js.', 'error'); return; } const card = $('upload-progress-card'); card.classList.remove('hidden'); for (let i = 0; i < list.length; i++) { const file = list[i]; const fd = new FormData(); fd.append('file', file); $('upload-progress-label').textContent = `Envoi : ${file.name}`; $('upload-progress-value').textContent = `${Math.round((i / list.length) * 100)}%`; $('upload-progress-range').value = Math.round((i / list.length) * 100); const res = await fetchWriteSafe(`api/upload/${state.uploadTab}`, { method: 'POST', body: fd }); if (!res.ok) { showStatus(`Upload impossible : ${res.error.message}`, 'error'); return; } } $('upload-progress-value').textContent = '100%'; $('upload-progress-range').value = 100; await refreshFiles(); }
+    async function deleteFile(type, name) { if (!name) return; if (!state.backendAvailable) { showStatus('Suppression impossible : API backend introuvable.', 'error'); closeSheet(); return; } const res = await fetchWriteSafe(`api/files/${type}/${encodeURIComponent(name)}`, { method: 'DELETE' }); if (!res.ok) { showStatus(`Suppression impossible : ${res.error.message}`, 'error'); closeSheet(); return; } bufferCache.clear(); await refreshFiles(); closeSheet(); }
+
+    function setActivePlaylist(id) { state.activePlaylistId = id || null; saveActivePlaylist(); applyPlaylistFilter(); state.currentIndex = -1; renderAll(); closeSheet(); }
+    function createPlaylist(name) { const clean = String(name || '').trim(); if (!clean) return; state.playlists.push({ id: newPlaylistId(), name: clean, musicNames: [], fxNames: [] }); savePlaylists(); $('new-playlist-name').value = ''; renderPlaylistSheets(); renderHeader(); }
+    function renamePlaylist(id, name) { const pl = state.playlists.find(p => p.id === id); if (!pl) return; const clean = String(name || '').trim(); if (!clean) return; pl.name = clean; savePlaylists(); renderHeader(); }
+    function deletePlaylist(id) { state.playlists = state.playlists.filter(p => p.id !== id); if (state.activePlaylistId === id) state.activePlaylistId = null; savePlaylists(); saveActivePlaylist(); applyPlaylistFilter(); renderAll(); closeSheet(); }
+    function togglePlaylistItem(id, kind, name) { const pl = state.playlists.find(p => p.id === id); if (!pl) return; const arr = kind === 'music' ? pl.musicNames : pl.fxNames; const pos = arr.indexOf(name); if (pos === -1) arr.push(name); else arr.splice(pos, 1); savePlaylists(); applyPlaylistFilter(); renderAll(); }
+    function openSheet(name) { if (name === 'deck') return closeSheet(); $('sheet-backdrop').classList.add('show'); $$('.sheet').forEach(s => s.classList.toggle('show', s.dataset.sheetPanel === name)); $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.sheet === name)); }
+    function closeSheet() { $('sheet-backdrop').classList.remove('show'); $$('.sheet').forEach(s => s.classList.remove('show')); $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.sheet === 'deck')); }
+    function askDeleteConfirm(name, cb) { confirmCallback = cb; $('confirm-name').textContent = name || 'Élément'; $('confirm-input').value = ''; $('confirm-ok').disabled = true; openSheet('confirm'); setTimeout(() => $('confirm-input').focus(), 120); }
+    function updateProgress() { const dur = musicAudioEl.duration; const cur = musicAudioEl.currentTime || 0; const p = Number.isFinite(dur) && dur > 0 ? Math.min(1, cur / dur) : 0; music.duration = dur || 0; $('time-current').textContent = fmt(cur); $('time-total').textContent = fmt(dur || 0); $('wave-progress').style.width = (p * 100) + '%'; $('seek-line').style.left = (p * 100) + '%'; }
+
+    function bindEvents() {
+      $('btn-play').addEventListener('click', togglePlay); $('btn-prev').addEventListener('click', () => loadTrack(Math.max(0, state.currentIndex - 1), true)); $('btn-next').addEventListener('click', () => loadTrack(Math.min(state.playlist.length - 1, state.currentIndex + 1), true)); $('btn-rewind').addEventListener('click', () => seekMusic(0)); $('btn-forward').addEventListener('click', () => seekMusic((musicAudioEl.currentTime || 0) + 10)); $('waveform').addEventListener('click', (e) => { const rect = e.currentTarget.getBoundingClientRect(); seekMusic(((e.clientX - rect.left) / rect.width) * (musicAudioEl.duration || 0)); });
+      $('volume').addEventListener('input', e => { state.userMusicVolume = Number(e.target.value); applyMusicGain(); renderDeck(); }); $('fx-volume').addEventListener('input', e => { state.fxVolume = Number(e.target.value); if (fxGainNode) fxGainNode.gain.value = state.fxVolume; renderDeck(); }); $('pitch').addEventListener('input', e => { state.pitch = Number(e.target.value); musicAudioEl.playbackRate = state.pitch; renderSettings(); }); $('duck-level').addEventListener('input', e => { state.duckLevel = Number(e.target.value); saveDuck(); applyMusicGain(); renderSettings(); }); $('loop-switch').addEventListener('click', () => { state.isLooping = !state.isLooping; renderSettings(); }); $('random-fx-switch').addEventListener('click', toggleRandomFx); $('rfx-min').addEventListener('change', e => { state.fxRandomMin = Number(e.target.value); saveRandomFx(); }); $('rfx-max').addEventListener('change', e => { state.fxRandomMax = Number(e.target.value); saveRandomFx(); });
+      $('file-input').addEventListener('change', e => uploadFiles(e.target.files)); $$('[data-upload-tab]').forEach(btn => btn.addEventListener('click', () => { state.uploadTab = btn.dataset.uploadTab; $$('[data-upload-tab]').forEach(b => b.classList.toggle('active', b === btn)); $('upload-type-label').textContent = `Ajout dans : ${state.uploadTab === 'music' ? 'Musiques' : 'FX'}`; }));
+      $$('[data-sheet]').forEach(btn => btn.addEventListener('click', () => openSheet(btn.dataset.sheet))); $('btn-upload').addEventListener('click', () => openSheet('upload')); $('btn-settings').addEventListener('click', () => openSheet('settings')); $('quick-playlist').addEventListener('click', () => openSheet('playlists')); $('quick-fx').addEventListener('click', () => openSheet('fx')); $('open-fx-manager').addEventListener('click', () => openSheet('fx')); $('open-playlist-manager').addEventListener('click', () => openSheet('playlists')); $('sheet-backdrop').addEventListener('click', closeSheet); $$('.sheet-close').forEach(btn => btn.addEventListener('click', closeSheet));
+      $$('[data-playlist-tab]').forEach(btn => btn.addEventListener('click', () => { const tab = btn.dataset.playlistTab; $$('[data-playlist-tab]').forEach(b => b.classList.toggle('active', b === btn)); $('playlist-select-panel').classList.toggle('hidden', tab !== 'select'); $('playlist-manage-panel').classList.toggle('hidden', tab !== 'manage'); })); $('create-playlist').addEventListener('click', () => createPlaylist($('new-playlist-name').value)); $('confirm-input').addEventListener('input', e => { $('confirm-ok').disabled = e.target.value.trim().toLowerCase() !== 'oui'; }); $('confirm-ok').addEventListener('click', () => { if (confirmCallback) confirmCallback(); }); $('clear-cache').addEventListener('click', () => { bufferCache.clear(); showStatus('Cache audio vidé.', 'success'); });
+      musicAudioEl.addEventListener('play', () => { state.isPlaying = true; renderDeck(); }); musicAudioEl.addEventListener('pause', () => { state.isPlaying = false; renderDeck(); }); musicAudioEl.addEventListener('ended', () => { state.isPlaying = false; if (state.isLooping) { seekMusic(0); playMusic(); return; } if (state.currentIndex < state.playlist.length - 1) loadTrack(state.currentIndex + 1, true); else renderDeck(); }); musicAudioEl.addEventListener('loadedmetadata', updateProgress); musicAudioEl.addEventListener('timeupdate', updateProgress);
+    }
+
+    function runSelfTests() {
+      console.assert(fmt(0) === '0:00', 'fmt(0) should be 0:00');
+      console.assert(fmt(65) === '1:05', 'fmt(65) should be 1:05');
+      console.assert(stripExt('test.mp3') === 'test', 'stripExt should remove .mp3');
+      console.assert(stripExt('test.wav') === 'test.wav', 'stripExt should not remove non-mp3');
+      console.assert(apiUrl('api/files/music') === '/api/files/music', 'apiUrl default should be absolute');
+      console.assert(apiUrl('api/files/music', '.') === './api/files/music', 'apiUrl dot base should be relative');
+      console.assert(Array.isArray(apiBaseCandidates()), 'apiBaseCandidates should return array');
+      console.assert(getComputedStyle($('screen')).overflowY === 'auto' || getComputedStyle($('screen')).overflowY === 'scroll', 'screen must be vertically scrollable');
+      console.assert(document.body.textContent.includes('La Rouxe-Box'), 'brand name should be La Rouxe-Box');
+      console.assert(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() === '#0a84ff', 'Apple-like theme accent should be iOS blue');
+    }
+
+    loadLocalState(); bindEvents(); renderWavePlaceholder(); renderAll(); runSelfTests(); refreshFiles();
+  </script>
 </body>
 </html>
