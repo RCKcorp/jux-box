@@ -488,13 +488,17 @@
     musicAudioEl.playsInline = true;
     musicAudioEl.setAttribute('playsinline', '');
     musicAudioEl.setAttribute('webkit-playsinline', '');
+    musicAudioEl.crossOrigin = 'anonymous';
+    musicAudioEl.volume = state.userMusicVolume;
     if ('preservesPitch' in musicAudioEl) musicAudioEl.preservesPitch = false;
     if ('mozPreservesPitch' in musicAudioEl) musicAudioEl.mozPreservesPitch = false;
     if ('webkitPreservesPitch' in musicAudioEl) musicAudioEl.webkitPreservesPitch = false;
-
-    let sourceNode = null;
-    try { sourceNode = ctx.createMediaElementSource(musicAudioEl); sourceNode.connect(masterGain); }
-    catch (err) { console.warn('Audio source already connected or unavailable:', err); }
+    // Append to DOM (hidden) — required on some iOS versions for background playback to register reliably
+    musicAudioEl.style.display = 'none';
+    document.body.appendChild(musicAudioEl);
+    // NOTE: we deliberately do NOT route musicAudioEl through Web Audio (createMediaElementSource).
+    // Routing through the AudioContext causes iOS to suspend audio when the screen locks. Direct
+    // <audio> playback keeps the OS media session alive and audio playing in background.
 
     const bufferCache = new Map();
     const music = { url: null, duration: 0 };
@@ -614,14 +618,49 @@
     function renderSettings() { $('loop-switch').classList.toggle('on', state.isLooping); $('pitch').value = state.pitch; $('pitch-val').textContent = state.pitch.toFixed(2) + 'x'; $('duck-level').value = state.duckLevel; $('duck-level-val').textContent = Math.round(state.duckLevel * 100) + '%'; $('rfx-min').value = state.fxRandomMin; $('rfx-max').value = state.fxRandomMax; }
 
     async function loadBuffer(url) { if (!url) throw new Error('Aucun fichier audio réel disponible'); if (bufferCache.has(url)) return bufferCache.get(url); const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status}`); const arr = await r.arrayBuffer(); const buf = await new Promise((resolve, reject) => { try { const p = ctx.decodeAudioData(arr, resolve, reject); if (p && typeof p.then === 'function') p.then(resolve, reject); } catch (e) { reject(e); } }); bufferCache.set(url, buf); return buf; }
-    function loadTrack(index, autoPlay = true) { if (index < 0 || index >= state.playlist.length) return; state.currentIndex = index; const track = state.playlist[index]; music.url = track.url || ''; music.duration = 0; musicAudioEl.pause(); if (music.url) musicAudioEl.src = music.url; else musicAudioEl.removeAttribute('src'); musicAudioEl.playbackRate = state.pitch; renderAll(); if (autoPlay) playMusic(); }
+    function loadTrack(index, autoPlay = true) { if (index < 0 || index >= state.playlist.length) return; state.currentIndex = index; const track = state.playlist[index]; music.url = track.url || ''; music.duration = 0; musicAudioEl.pause(); if (music.url) musicAudioEl.src = music.url; else musicAudioEl.removeAttribute('src'); musicAudioEl.playbackRate = state.pitch; setMediaSessionMetadata(track); renderAll(); if (autoPlay) playMusic(); }
     function playMusic() { unlockAudio(); if (!music.url) { if (state.playlist.length && state.currentIndex === -1) return loadTrack(0, true); if (state.demoMode) showStatus('Mode démo : aucun vrai MP3 à lire. Lance le backend ou ajoute des fichiers via server.js.', 'warning'); return; } musicAudioEl.play().catch(err => showStatus(`Lecture impossible : ${err.message}`, 'error')); }
     function pauseMusic() { musicAudioEl.pause(); }
     function togglePlay() { state.isPlaying ? pauseMusic() : playMusic(); }
     function seekMusic(t) { if (!Number.isFinite(musicAudioEl.duration)) return; musicAudioEl.currentTime = Math.max(0, Math.min(t, musicAudioEl.duration)); updateProgress(); }
-    function applyMusicGain() { const target = state.userMusicVolume * (isDucked ? state.duckLevel : 1); const now = ctx.currentTime; try { masterGain.gain.cancelScheduledValues(now); masterGain.gain.setValueAtTime(masterGain.gain.value, now); masterGain.gain.linearRampToValueAtTime(target, now + 0.14); } catch { masterGain.gain.value = target; } }
+    let _volRampId = null;
+    function applyMusicGain() {
+      const target = Math.max(0, Math.min(1, state.userMusicVolume * (isDucked ? state.duckLevel : 1)));
+      if (_volRampId) cancelAnimationFrame(_volRampId);
+      const start = musicAudioEl.volume;
+      const t0 = performance.now();
+      const step = (t) => { const p = Math.min(1, (t - t0) / 140); musicAudioEl.volume = start + (target - start) * p; if (p < 1) _volRampId = requestAnimationFrame(step); else _volRampId = null; };
+      _volRampId = requestAnimationFrame(step);
+    }
     function duckMusic() { isDucked = true; applyMusicGain(); }
     function unduckMusic() { isDucked = false; applyMusicGain(); }
+
+    function setupMediaSession() {
+      if (!('mediaSession' in navigator)) return;
+      const safe = (a, h) => { try { navigator.mediaSession.setActionHandler(a, h); } catch {} };
+      safe('play', () => playMusic());
+      safe('pause', () => pauseMusic());
+      safe('previoustrack', () => { if (state.currentIndex > 0) loadTrack(state.currentIndex - 1, true); });
+      safe('nexttrack', () => { if (state.currentIndex < state.playlist.length - 1) loadTrack(state.currentIndex + 1, true); });
+      safe('seekto', (d) => { if (d && d.seekTime != null) seekMusic(d.seekTime); });
+      safe('seekbackward', (d) => seekMusic((musicAudioEl.currentTime || 0) - (d?.seekOffset || 10)));
+      safe('seekforward', (d) => seekMusic((musicAudioEl.currentTime || 0) + (d?.seekOffset || 10)));
+    }
+    function setMediaSessionMetadata(track) {
+      if (!('mediaSession' in navigator) || !track) return;
+      try {
+        const pl = getActivePlaylist();
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: stripExt(track.name),
+          artist: 'JuxBox',
+          album: pl ? pl.name : 'Tous',
+        });
+      } catch {}
+    }
+    function updateMediaSessionState() {
+      if (!('mediaSession' in navigator)) return;
+      try { navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused'; } catch {}
+    }
     function stopFx() { if (fxSource) { try { fxSource.onended = null; fxSource.stop(); } catch {} } fxSource = null; fxGainNode = null; playingFxIndex = -1; unduckMusic(); renderQuickFx(); renderFxSheet(); }
     async function playFxSound(index) { unlockAudio(); if (playingFxIndex === index) return stopFx(); if (fxSource) { try { fxSource.onended = null; fxSource.stop(); } catch {} } playingFxIndex = index; renderQuickFx(); renderFxSheet(); const fx = state.fxSounds[index]; if (!fx?.url) { showStatus('Mode démo : FX simulé, pas de fichier audio réel.', 'warning'); setTimeout(() => { if (playingFxIndex === index) stopFx(); }, 900); return; } try { const buf = await loadBuffer(fx.url); if (playingFxIndex !== index) return; const src = ctx.createBufferSource(); const gain = ctx.createGain(); gain.gain.value = state.fxVolume * (fx.volume ?? 1); src.buffer = buf; src.connect(gain).connect(ctx.destination); src.onended = () => { if (fxSource === src) stopFx(); }; src.start(0); fxSource = src; fxGainNode = gain; duckMusic(); } catch (e) { stopFx(); showStatus(`FX impossible : ${e.message}`, 'error'); } }
     function scheduleNextRandomFx() { if (!state.autoFxEnabled) return; const min = Math.max(1, Number(state.fxRandomMin) || 1); const max = Math.max(min, Number(state.fxRandomMax) || min); const delay = (min + Math.random() * (max - min)) * 1000; autoFxTimer = setTimeout(() => { if (state.fxSounds.length) playFxSound(Math.floor(Math.random() * state.fxSounds.length)); scheduleNextRandomFx(); }, delay); }
@@ -645,7 +684,8 @@
       $('file-input').addEventListener('change', e => uploadFiles(e.target.files)); $$('[data-upload-tab]').forEach(btn => btn.addEventListener('click', () => { state.uploadTab = btn.dataset.uploadTab; $$('[data-upload-tab]').forEach(b => b.classList.toggle('active', b === btn)); $('upload-type-label').textContent = `Ajout dans : ${state.uploadTab === 'music' ? 'Musiques' : 'FX'}`; }));
       $$('[data-sheet]').forEach(btn => btn.addEventListener('click', () => openSheet(btn.dataset.sheet))); $('btn-upload').addEventListener('click', () => openSheet('upload')); $('btn-settings').addEventListener('click', () => openSheet('settings')); $('quick-playlist').addEventListener('click', () => openSheet('playlists')); $('quick-fx').addEventListener('click', () => openSheet('fx')); $('open-fx-manager').addEventListener('click', () => openSheet('fx')); $('open-playlist-manager').addEventListener('click', () => openSheet('playlists')); $('sheet-backdrop').addEventListener('click', closeSheet); $$('.sheet-close').forEach(btn => btn.addEventListener('click', closeSheet));
       $$('[data-playlist-tab]').forEach(btn => btn.addEventListener('click', () => { const tab = btn.dataset.playlistTab; $$('[data-playlist-tab]').forEach(b => b.classList.toggle('active', b === btn)); $('playlist-select-panel').classList.toggle('hidden', tab !== 'select'); $('playlist-manage-panel').classList.toggle('hidden', tab !== 'manage'); })); $('create-playlist').addEventListener('click', () => createPlaylist($('new-playlist-name').value)); $('confirm-input').addEventListener('input', e => { $('confirm-ok').disabled = e.target.value.trim().toLowerCase() !== 'oui'; }); $('confirm-ok').addEventListener('click', () => { if (confirmCallback) confirmCallback(); }); $('clear-cache').addEventListener('click', () => { bufferCache.clear(); showStatus('Cache audio vidé.', 'success'); });
-      musicAudioEl.addEventListener('play', () => { state.isPlaying = true; renderDeck(); }); musicAudioEl.addEventListener('pause', () => { state.isPlaying = false; renderDeck(); }); musicAudioEl.addEventListener('ended', () => { state.isPlaying = false; if (state.isLooping) { seekMusic(0); playMusic(); return; } if (state.currentIndex < state.playlist.length - 1) loadTrack(state.currentIndex + 1, true); else renderDeck(); }); musicAudioEl.addEventListener('loadedmetadata', updateProgress); musicAudioEl.addEventListener('timeupdate', updateProgress);
+      musicAudioEl.addEventListener('play', () => { state.isPlaying = true; renderDeck(); updateMediaSessionState(); }); musicAudioEl.addEventListener('pause', () => { state.isPlaying = false; renderDeck(); updateMediaSessionState(); }); musicAudioEl.addEventListener('ended', () => { state.isPlaying = false; updateMediaSessionState(); if (state.isLooping) { seekMusic(0); playMusic(); return; } if (state.currentIndex < state.playlist.length - 1) loadTrack(state.currentIndex + 1, true); else renderDeck(); }); musicAudioEl.addEventListener('loadedmetadata', updateProgress); musicAudioEl.addEventListener('timeupdate', updateProgress);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && ctx.state === 'suspended') ctx.resume().catch(() => {}); });
     }
 
     function runSelfTests() {
@@ -661,7 +701,7 @@
       console.assert(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() === '#0a84ff', 'Apple-like theme accent should be iOS blue');
     }
 
-    loadLocalState(); bindEvents(); renderWavePlaceholder(); renderAll(); runSelfTests(); refreshFiles();
+    loadLocalState(); setupMediaSession(); bindEvents(); renderWavePlaceholder(); renderAll(); runSelfTests(); refreshFiles();
   </script>
 </body>
 </html>
