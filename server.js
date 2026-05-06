@@ -65,7 +65,12 @@ const upload = multer({
 });
 
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads', {
+  maxAge: '30d',
+  etag: true,
+  lastModified: true,
+  immutable: false,
+}));
 
 // List files
 app.get('/api/files/:type', (req, res) => {

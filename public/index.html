@@ -10,6 +10,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- Preload screen (shown while audio files cache) -->
+  <div id="preload-screen" class="preload-screen">
+    <div class="preload-logo">JUX<span>BOX</span></div>
+    <div class="preload-status" id="preload-status">Préparation…</div>
+    <div class="preload-bar"><div class="preload-fill" id="preload-fill"></div></div>
+    <div class="preload-count" id="preload-count">—</div>
+    <button class="preload-skip hidden" id="preload-skip">Démarrer maintenant</button>
+  </div>
+
   <div id="app">
 
     <!-- Header -->
@@ -48,6 +58,15 @@
               <label>Loop</label>
               <button class="btn-loop" id="btn-loop">OFF</button>
             </div>
+          </div>
+        </section>
+
+        <section class="settings-block">
+          <h4>Ducking FX</h4>
+          <div class="knob-group">
+            <label>Volume musique pendant FX</label>
+            <input type="range" id="duck-level" min="0" max="1" step="0.01" value="0.7" class="slider">
+            <span class="slider-val" id="duck-level-val">70%</span>
           </div>
         </section>
 

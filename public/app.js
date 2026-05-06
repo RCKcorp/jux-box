@@ -10,11 +10,25 @@ const state = {
   isPlaying: false,
   isLooping: false,
   fxVolume: 1,
+  userMusicVolume: 0.8,
+  duckLevel: 0.7,
   fxRandomMin: 10,
   fxRandomMax: 45,
   currentUploadTab: 'music',
   currentPlaylistsTab: 'select',
 };
+
+const DUCK_KEY = 'juxbox-duck-level';
+function loadDuckStorage() {
+  const raw = localStorage.getItem(DUCK_KEY);
+  if (raw !== null) {
+    const v = parseFloat(raw);
+    if (Number.isFinite(v) && v >= 0 && v <= 1) state.duckLevel = v;
+  }
+}
+function saveDuckLevel() {
+  localStorage.setItem(DUCK_KEY, String(state.duckLevel));
+}
 
 const RANDOM_FX_KEY = 'juxbox-random-fx-range';
 function loadRandomFxStorage() {
@@ -110,6 +124,34 @@ const masterGain = ctx.createGain();
 masterGain.gain.value = 0.8;
 masterGain.connect(ctx.destination);
 
+// Auto-ducking: music drops to state.duckLevel while an FX is playing, with a short fade.
+const DUCK_RAMP = 0.15;
+let isDucked = false;
+
+function applyMusicGain() {
+  const target = state.userMusicVolume * (isDucked ? state.duckLevel : 1);
+  const now = ctx.currentTime;
+  try {
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+    masterGain.gain.linearRampToValueAtTime(target, now + DUCK_RAMP);
+  } catch (e) {
+    masterGain.gain.value = target;
+  }
+}
+
+function duckMusic() {
+  if (isDucked) return;
+  isDucked = true;
+  applyMusicGain();
+}
+
+function unduckMusic() {
+  if (!isDucked) return;
+  isDucked = false;
+  applyMusicGain();
+}
+
 let unlocked = false;
 function unlockAudio() {
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -145,106 +187,145 @@ async function loadBuffer(url) {
   return buf;
 }
 
-// ── Music player ──
+// ── Music player (HTMLAudioElement routed through Web Audio for volume control) ──
+// Using an <audio> element + MediaSession lets the OS keep playback alive when
+// the screen locks on iOS/Android, while createMediaElementSource keeps the
+// existing masterGain volume slider working.
+const musicAudioEl = new Audio();
+musicAudioEl.preload = 'auto';
+musicAudioEl.playsInline = true;
+musicAudioEl.setAttribute('playsinline', '');
+musicAudioEl.setAttribute('webkit-playsinline', '');
+musicAudioEl.crossOrigin = 'anonymous';
+if ('preservesPitch' in musicAudioEl) musicAudioEl.preservesPitch = false;
+if ('mozPreservesPitch' in musicAudioEl) musicAudioEl.mozPreservesPitch = false;
+if ('webkitPreservesPitch' in musicAudioEl) musicAudioEl.webkitPreservesPitch = false;
+
+const musicSourceNode = ctx.createMediaElementSource(musicAudioEl);
+musicSourceNode.connect(masterGain);
+
 const music = {
-  buffer: null,
-  source: null,
-  startedAt: 0,        // ctx.currentTime when source started
-  offset: 0,           // playback position when last started (in track seconds)
-  playbackRate: 1,
   isPlaying: false,
   duration: 0,
   url: null,
+  playbackRate: 1,
 };
 
 function getCurrentTime() {
-  if (!music.buffer) return 0;
-  if (music.isPlaying) {
-    return Math.min(music.duration, music.offset + (ctx.currentTime - music.startedAt) * music.playbackRate);
-  }
-  return music.offset;
-}
-
-function stopSource() {
-  if (music.source) {
-    try { music.source.onended = null; music.source.stop(); } catch (e) {}
-    music.source = null;
-  }
-}
-
-function startSource(offset) {
-  if (!music.buffer) return;
-  stopSource();
-  const off = Math.max(0, Math.min(offset, music.duration));
-  const src = ctx.createBufferSource();
-  src.buffer = music.buffer;
-  src.playbackRate.value = music.playbackRate;
-  src.connect(masterGain);
-  src.onended = () => {
-    if (music.source === src) {
-      music.source = null;
-      music.isPlaying = false;
-      music.offset = music.duration;
-      handleTrackEnded();
-    }
-  };
-  src.start(0, off);
-  music.source = src;
-  music.startedAt = ctx.currentTime;
-  music.offset = off;
-  music.isPlaying = true;
-  state.isPlaying = true;
+  return musicAudioEl.currentTime || 0;
 }
 
 function playMusic() {
-  if (!music.buffer || music.isPlaying) return;
+  if (!music.url) return;
   unlockAudio();
-  if (music.offset >= music.duration) music.offset = 0;
-  startSource(music.offset);
+  const p = musicAudioEl.play();
+  if (p && p.catch) p.catch(() => {});
 }
 
 function pauseMusic() {
-  if (!music.isPlaying) return;
-  const pos = getCurrentTime();
-  stopSource();
-  music.offset = Math.min(pos, music.duration);
-  music.isPlaying = false;
-  state.isPlaying = false;
+  musicAudioEl.pause();
 }
 
 function seekMusic(t) {
-  if (!music.buffer) return;
+  if (!music.duration) return;
   const target = Math.max(0, Math.min(t, music.duration));
-  if (music.isPlaying) {
-    startSource(target);
-  } else {
-    music.offset = target;
-    updateProgressUI(true);
-  }
+  try { musicAudioEl.currentTime = target; } catch (e) {}
+  if (!music.isPlaying) updateProgressUI(true);
 }
 
 function setMusicVolume(v) {
-  masterGain.gain.value = v;
+  state.userMusicVolume = v;
+  applyMusicGain();
 }
 
 function setMusicPlaybackRate(v) {
   music.playbackRate = v;
-  if (music.source && music.isPlaying) {
-    // Re-anchor offset so getCurrentTime stays accurate after rate change
-    music.offset = getCurrentTime();
-    music.startedAt = ctx.currentTime;
-    music.source.playbackRate.value = v;
-  }
+  musicAudioEl.playbackRate = v;
 }
 
 function handleTrackEnded() {
-  updatePlayUI();
   if (state.isLooping) {
-    startSource(0);
-    updatePlayUI();
-  } else if (state.currentIndex < state.playlist.length - 1) {
-    loadTrack(state.currentIndex + 1, true);
+    try { musicAudioEl.currentTime = 0; } catch (e) {}
+    playMusic();
+    return;
   }
+  if (state.currentIndex < state.playlist.length - 1) {
+    loadTrack(state.currentIndex + 1, true);
+  } else {
+    updatePlayUI();
+    updateMediaSessionState();
+  }
+}
+
+musicAudioEl.addEventListener('play', () => {
+  music.isPlaying = true;
+  state.isPlaying = true;
+  updatePlayUI();
+  updateMediaSessionState();
+});
+
+musicAudioEl.addEventListener('pause', () => {
+  music.isPlaying = false;
+  state.isPlaying = false;
+  updatePlayUI();
+  updateMediaSessionState();
+});
+
+musicAudioEl.addEventListener('ended', () => {
+  music.isPlaying = false;
+  state.isPlaying = false;
+  handleTrackEnded();
+});
+
+musicAudioEl.addEventListener('loadedmetadata', () => {
+  if (isFinite(musicAudioEl.duration) && musicAudioEl.duration > 0) {
+    music.duration = musicAudioEl.duration;
+    elTimeTotal.textContent = fmt(musicAudioEl.duration);
+  }
+});
+
+// ── MediaSession (lock-screen controls + keeps playback alive in background) ──
+function setMediaSessionMetadata(track) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    const pl = getActivePlaylist();
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: stripExt(track.name),
+      artist: 'JuxBox',
+      album: pl ? pl.name : 'Tous',
+    });
+  } catch (e) {}
+}
+
+function updateMediaSessionState() {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = music.isPlaying ? 'playing' : 'paused';
+  } catch (e) {}
+}
+
+function setupMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  const safeSet = (action, handler) => {
+    try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
+  };
+  safeSet('play', () => playMusic());
+  safeSet('pause', () => pauseMusic());
+  safeSet('previoustrack', () => {
+    if (state.currentIndex > 0) loadTrack(state.currentIndex - 1, true);
+  });
+  safeSet('nexttrack', () => {
+    if (state.currentIndex < state.playlist.length - 1) loadTrack(state.currentIndex + 1, true);
+  });
+  safeSet('seekto', (details) => {
+    if (details && details.seekTime != null) seekMusic(details.seekTime);
+  });
+  safeSet('seekbackward', (details) => {
+    seekMusic(getCurrentTime() - (details && details.seekOffset ? details.seekOffset : 10));
+  });
+  safeSet('seekforward', (details) => {
+    seekMusic(getCurrentTime() + (details && details.seekOffset ? details.seekOffset : 10));
+  });
 }
 
 // ── Waveform drawing ──
@@ -304,13 +385,14 @@ async function loadTrack(index, autoPlay = true) {
   state.currentIndex = index;
   const track = state.playlist[index];
 
-  stopSource();
-  music.buffer = null;
-  music.offset = 0;
-  music.isPlaying = false;
-  music.duration = 0;
   music.url = track.url;
+  music.duration = 0;
+  music.isPlaying = false;
   state.isPlaying = false;
+
+  musicAudioEl.pause();
+  musicAudioEl.src = track.url;
+  musicAudioEl.playbackRate = music.playbackRate;
 
   elTrackName.textContent = stripExt(track.name);
   elTrackIndex.textContent = `${index + 1} / ${state.playlist.length}`;
@@ -322,19 +404,20 @@ async function loadTrack(index, autoPlay = true) {
   redrawWaveform(0);
   renderPlaylist();
   updatePlayUI();
+  setMediaSessionMetadata(track);
 
+  if (autoPlay) playMusic();
+
+  // Decode the buffer in the background just to draw the waveform.
+  // Playback is already going via the <audio> element, so this never blocks it.
   try {
     const buf = await loadBuffer(track.url);
-    if (music.url !== track.url) return; // user switched track meanwhile
-    music.buffer = buf;
-    music.duration = buf.duration;
-    elTimeTotal.textContent = fmt(buf.duration);
-    drawWaveform(generateWaveform(buf));
-
-    if (autoPlay) {
-      startSource(0);
-      updatePlayUI();
+    if (music.url !== track.url) return;
+    if (!music.duration) {
+      music.duration = buf.duration;
+      elTimeTotal.textContent = fmt(buf.duration);
     }
+    drawWaveform(generateWaveform(buf));
   } catch (e) {
     notify('Erreur de chargement: ' + e.message, 'error');
   }
@@ -346,13 +429,12 @@ function togglePlay() {
     if (state.playlist.length > 0) loadTrack(0, true);
     return;
   }
-  if (!music.buffer) {
+  if (!music.url) {
     loadTrack(state.currentIndex, true);
     return;
   }
   if (music.isPlaying) pauseMusic();
   else playMusic();
-  updatePlayUI();
 }
 
 function updatePlayUI() {
@@ -601,15 +683,17 @@ function doRemoveTrack(index) {
   fetch(`/api/files/music/${encodeURIComponent(track.name)}`, { method: 'DELETE' })
     .then(() => {
       bufferCache.delete(track.url);
+      invalidateAudioCache(track.url);
       state.allMusic = state.allMusic.filter(t => t.name !== track.name);
       state.playlists.forEach(p => { p.musicNames = p.musicNames.filter(n => n !== track.name); });
       savePlaylists();
       applyPlaylistFilter();
       if (wasCurrent) {
-        stopSource();
-        music.buffer = null;
+        musicAudioEl.pause();
+        musicAudioEl.removeAttribute('src');
+        musicAudioEl.load();
+        music.url = null;
         music.duration = 0;
-        music.offset = 0;
         music.isPlaying = false;
         state.isPlaying = false;
         state.currentIndex = -1;
@@ -682,6 +766,7 @@ function stopFx() {
     fxGainNode = null;
   }
   playingFxIndex = -1;
+  unduckMusic();
 }
 
 async function playFxSound(index, { toggle = true } = {}) {
@@ -712,14 +797,17 @@ async function playFxSound(index, { toggle = true } = {}) {
         fxSource = null;
         fxGainNode = null;
         playingFxIndex = -1;
+        unduckMusic();
         renderFxList(); renderFxStrips();
       }
     };
     src.start(0);
     fxSource = src;
     fxGainNode = g;
+    duckMusic();
   } catch (e) {
     playingFxIndex = -1;
+    unduckMusic();
     renderFxList(); renderFxStrips();
     notify('Erreur FX: ' + e.message, 'error');
   }
@@ -809,6 +897,7 @@ function doRemoveFxSound(index) {
   fetch(`/api/files/fx/${encodeURIComponent(fx.name)}`, { method: 'DELETE' })
     .then(() => {
       bufferCache.delete(fx.url);
+      invalidateAudioCache(fx.url);
       if (playingFxIndex === index) stopFx();
       state.allFx = state.allFx.filter(f => f.name !== fx.name);
       state.playlists.forEach(p => { p.fxNames = p.fxNames.filter(n => n !== fx.name); });
@@ -837,7 +926,92 @@ function loadFiles() {
     renderFxStrips();
     renderPlaylistsPanel();
     redrawWaveform(0);
+    preloadAllAudio([...music, ...fx]);
   });
+}
+
+// ── Preload screen + audio prefetch ──
+const preloadEl = document.getElementById('preload-screen');
+const preloadStatusEl = document.getElementById('preload-status');
+const preloadFillEl = document.getElementById('preload-fill');
+const preloadCountEl = document.getElementById('preload-count');
+const preloadSkipEl = document.getElementById('preload-skip');
+
+let preloadSkipped = false;
+preloadSkipEl.addEventListener('click', () => {
+  preloadSkipped = true;
+  hidePreloadScreen();
+});
+
+function hidePreloadScreen() {
+  if (!preloadEl) return;
+  preloadEl.classList.add('hidden');
+  // Remove from DOM after transition so it doesn't trap touches
+  setTimeout(() => { preloadEl.style.display = 'none'; }, 400);
+}
+
+function showPreloadProgress(done, total, label) {
+  if (!total) {
+    preloadStatusEl.textContent = label || 'Aucun fichier à précharger';
+    preloadFillEl.style.width = '100%';
+    preloadCountEl.textContent = '—';
+    return;
+  }
+  const pct = Math.round((done / total) * 100);
+  preloadStatusEl.textContent = label || 'Préchargement des morceaux…';
+  preloadFillEl.style.width = pct + '%';
+  preloadCountEl.textContent = `${done} / ${total}`;
+}
+
+async function preloadAllAudio(files) {
+  if (!files || !files.length) {
+    showPreloadProgress(0, 0, 'Aucun fichier');
+    setTimeout(hidePreloadScreen, 400);
+    return;
+  }
+  // Show "skip" button after 2s in case the user wants to start before everything is cached
+  setTimeout(() => preloadSkipEl.classList.remove('hidden'), 2000);
+
+  const total = files.length;
+  let done = 0;
+  showPreloadProgress(0, total);
+
+  const concurrency = 4;
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < files.length && !preloadSkipped) {
+      const i = cursor++;
+      const url = files[i].url;
+      try {
+        // Plain fetch — service worker (if active) caches it; otherwise the
+        // browser HTTP cache holds it thanks to Cache-Control on /uploads/.
+        const res = await fetch(url, { cache: 'force-cache' });
+        if (res.ok) await res.blob(); // ensure full body is consumed/stored
+      } catch (e) { /* ignore individual failures */ }
+      done++;
+      showPreloadProgress(done, total);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, total) }, worker);
+  await Promise.all(workers);
+  if (!preloadSkipped) hidePreloadScreen();
+}
+
+// ── Service Worker registration (HTTPS / localhost only) ──
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  // Register asynchronously — failure is non-fatal (HTTP fallback still works)
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+function invalidateAudioCache(url) {
+  if (!('caches' in window)) return;
+  caches.open('juxbox-audio-v1').then(c => c.delete(new Request(url, { method: 'GET' }))).catch(() => {});
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'invalidate', url });
+  }
 }
 
 // ── Upload ──
@@ -935,6 +1109,17 @@ document.getElementById('fx-volume').addEventListener('input', (e) => {
   const val = parseFloat(e.target.value);
   setFxVolume(val);
   document.getElementById('fx-volume-val').textContent = Math.round(val * 100) + '%';
+});
+
+// Ducking level: how loud the music plays while an FX is firing
+const duckLevelEl = document.getElementById('duck-level');
+const duckLevelValEl = document.getElementById('duck-level-val');
+duckLevelEl.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value);
+  state.duckLevel = val;
+  duckLevelValEl.textContent = Math.round(val * 100) + '%';
+  saveDuckLevel();
+  if (isDucked) applyMusicGain();
 });
 
 // Pitch
@@ -1119,8 +1304,13 @@ window.addEventListener('resize', () => {
 // ── Init ──
 loadPlaylistsStorage();
 loadRandomFxStorage();
+loadDuckStorage();
 updateActivePlaylistLabel();
 rfxMinEl.value = state.fxRandomMin;
 rfxMaxEl.value = state.fxRandomMax;
+duckLevelEl.value = state.duckLevel;
+duckLevelValEl.textContent = Math.round(state.duckLevel * 100) + '%';
+setupMediaSession();
+registerServiceWorker();
 loadFiles();
 redrawWaveform(0);
