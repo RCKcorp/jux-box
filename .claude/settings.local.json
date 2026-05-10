@@ -12,7 +12,12 @@
       "Bash(cd /tmp)",
       "Bash(curl -s -X POST http://localhost:62311/api/upload/music -F \"file=@test.mp3\")",
       "Bash(node -e ':*)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(npm start:*)",
+      "Skill(update-config)",
+      "PowerShell(Expand-Archive *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }
