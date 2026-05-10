@@ -64,7 +64,13 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 } // 100MB
 });
 
-app.use(express.static('public'));
+app.use(express.static('public', {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+  },
+}));
 app.use('/uploads', express.static('uploads', {
   maxAge: '30d',
   etag: true,

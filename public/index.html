@@ -628,10 +628,15 @@
     function seekMusic(t) { if (!Number.isFinite(musicAudioEl.duration)) return; musicAudioEl.currentTime = Math.max(0, Math.min(t, musicAudioEl.duration)); updateProgress(); }
     function applyMusicGain() {
       const target = Math.max(0, Math.min(1, state.userMusicVolume * (isDucked ? state.duckLevel : 1)));
-      const now = ctx.currentTime;
-      musicGain.gain.cancelScheduledValues(now);
-      musicGain.gain.setValueAtTime(musicGain.gain.value, now);
-      musicGain.gain.linearRampToValueAtTime(target, now + 0.14);
+      unlockAudio();
+      try {
+        const now = ctx.currentTime;
+        musicGain.gain.cancelScheduledValues(now);
+        musicGain.gain.setValueAtTime(musicGain.gain.value, now);
+        musicGain.gain.linearRampToValueAtTime(target, now + 0.14);
+      } catch {
+        musicGain.gain.value = target;
+      }
     }
     function duckMusic() { isDucked = true; applyMusicGain(); }
     function unduckMusic() { isDucked = false; applyMusicGain(); }
