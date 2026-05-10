@@ -480,7 +480,7 @@
     const AC = window.AudioContext || window.webkitAudioContext;
     const ctx = new AC();
     const masterGain = ctx.createGain();
-    masterGain.gain.value = state.userMusicVolume;
+    masterGain.gain.value = 1;
     masterGain.connect(ctx.destination);
 
     const musicAudioEl = new Audio();
@@ -489,16 +489,19 @@
     musicAudioEl.setAttribute('playsinline', '');
     musicAudioEl.setAttribute('webkit-playsinline', '');
     musicAudioEl.crossOrigin = 'anonymous';
-    musicAudioEl.volume = state.userMusicVolume;
+    musicAudioEl.volume = 1; // hardware volume stays at 1; software volume handled by musicGain below
     if ('preservesPitch' in musicAudioEl) musicAudioEl.preservesPitch = false;
     if ('mozPreservesPitch' in musicAudioEl) musicAudioEl.mozPreservesPitch = false;
     if ('webkitPreservesPitch' in musicAudioEl) musicAudioEl.webkitPreservesPitch = false;
     // Append to DOM (hidden) — required on some iOS versions for background playback to register reliably
     musicAudioEl.style.display = 'none';
     document.body.appendChild(musicAudioEl);
-    // NOTE: we deliberately do NOT route musicAudioEl through Web Audio (createMediaElementSource).
-    // Routing through the AudioContext causes iOS to suspend audio when the screen locks. Direct
-    // <audio> playback keeps the OS media session alive and audio playing in background.
+    // Route through Web Audio so the volume slider works on iOS (HTMLMediaElement.volume is read-only there).
+    // ctx.resume() is called on visibility change and on user gestures so the screen-lock suspend is recoverable.
+    const musicSource = ctx.createMediaElementSource(musicAudioEl);
+    const musicGain = ctx.createGain();
+    musicGain.gain.value = state.userMusicVolume;
+    musicSource.connect(musicGain).connect(masterGain);
 
     const bufferCache = new Map();
     const music = { url: null, duration: 0 };
@@ -623,14 +626,12 @@
     function pauseMusic() { musicAudioEl.pause(); }
     function togglePlay() { state.isPlaying ? pauseMusic() : playMusic(); }
     function seekMusic(t) { if (!Number.isFinite(musicAudioEl.duration)) return; musicAudioEl.currentTime = Math.max(0, Math.min(t, musicAudioEl.duration)); updateProgress(); }
-    let _volRampId = null;
     function applyMusicGain() {
       const target = Math.max(0, Math.min(1, state.userMusicVolume * (isDucked ? state.duckLevel : 1)));
-      if (_volRampId) cancelAnimationFrame(_volRampId);
-      const start = musicAudioEl.volume;
-      const t0 = performance.now();
-      const step = (t) => { const p = Math.min(1, (t - t0) / 140); musicAudioEl.volume = start + (target - start) * p; if (p < 1) _volRampId = requestAnimationFrame(step); else _volRampId = null; };
-      _volRampId = requestAnimationFrame(step);
+      const now = ctx.currentTime;
+      musicGain.gain.cancelScheduledValues(now);
+      musicGain.gain.setValueAtTime(musicGain.gain.value, now);
+      musicGain.gain.linearRampToValueAtTime(target, now + 0.14);
     }
     function duckMusic() { isDucked = true; applyMusicGain(); }
     function unduckMusic() { isDucked = false; applyMusicGain(); }
