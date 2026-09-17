@@ -5,6 +5,7 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Ensure upload dirs exist
 ['uploads/music', 'uploads/fx'].forEach(dir => {
@@ -45,7 +46,6 @@ const storage = multer.diskStorage({
     cb(null, `uploads/${type}`);
   },
   filename: (req, file, cb) => {
-    // Sanitize filename
     const safe = file.originalname.replace(/[^a-zA-Z0-9._\- ]/g, '_');
     cb(null, safe);
   }
@@ -61,7 +61,7 @@ const upload = multer({
       cb(new Error('Only MP3 files are allowed'));
     }
   },
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+  limits: { fileSize: 100 * 1024 * 1024 }
 });
 
 app.use(express.static('public', {
@@ -78,7 +78,6 @@ app.use('/uploads', express.static('uploads', {
   immutable: false,
 }));
 
-// List files
 app.get('/api/files/:type', (req, res) => {
   const type = req.params.type;
   if (type !== 'music' && type !== 'fx') return res.status(400).json({ error: 'Invalid type' });
@@ -89,7 +88,6 @@ app.get('/api/files/:type', (req, res) => {
   res.json(files);
 });
 
-// Upload file
 app.post('/api/upload/:type', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({
@@ -98,7 +96,6 @@ app.post('/api/upload/:type', upload.single('file'), (req, res) => {
   });
 });
 
-// Delete file
 app.delete('/api/files/:type/:name', (req, res) => {
   const type = req.params.type;
   if (type !== 'music' && type !== 'fx') return res.status(400).json({ error: 'Invalid type' });
@@ -117,6 +114,6 @@ app.use((err, req, res, next) => {
   res.status(400).json({ error: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`JuxBox running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`JuxBox running on http://${HOST}:${PORT}`);
 });

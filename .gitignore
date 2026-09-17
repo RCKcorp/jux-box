@@ -1,5 +1,28 @@
 node_modules/
+
+# User media / runtime data
 uploads/music/
 uploads/fx/
-*.log
+defaults/fx/*.mp3
+!defaults/fx/README.md
+
+# Secrets and local configuration
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+
+# Local tooling
+.claude/
+.vscode/
+.idea/
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
